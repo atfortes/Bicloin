@@ -4,6 +4,8 @@
 syntax = "proto3";
 package pt.tecnico.bicloin.hub.grpc;
 
+// ping service
+
 message CtrlPingRequest {
   string input = 1;
 }
@@ -11,7 +13,105 @@ message CtrlPingRequest {
 message CtrlPingResponse {
 	string output = 1;
 }
-  
+
+// balance service
+
+message BalanceRequest {
+  string username = 1;
+}
+
+message BalanceResponse {
+  int32 balance = 1;
+}
+
+// top up service
+
+message TopUpRequest {
+  string username = 1;
+  int32 amount = 2;
+  string phone_number = 3;
+}
+
+message TopUpResponse {
+  int32 balance = 1;
+}
+
+// info station service
+
+message InfoStationRequest {
+  string station_id = 1;
+}
+
+message InfoStationResponse {
+  string name = 1;
+  float latitude = 2;
+  float longitude = 3;
+  int32 capacity = 4;
+  float award = 5;
+  int32 bikes = 6;
+  int32 pickups = 7;
+  int32 deliveries = 8;
+}
+
+// locate station service
+
+message LocateStationRequest {
+  float latitude = 1;
+  float longitude = 2;
+  int32 k = 3;
+}
+
+message LocateStationResponse {
+  repeated string ids = 1;
+}
+
+// bike service
+
+message BikeRequest {
+  string username = 1;
+  float latitude = 2;
+  float longitude = 3;
+  string station_id = 4;
+}
+
+message BikeResponse {
+  enum Response {
+    OK = 0;
+    OUT_OF_RANGE = 1;
+    ALREADY_HAS_BIKE = 2;
+    NO_BIKES_IN_STATION = 3;
+    NO_BIKE_REQUESTED = 4;
+    STATION_IS_FULL = 5;
+
+  }
+  Response response = 1;
+}
+
+// sys status service
+
+message SysStatusRequest {
+}
+
+message SysStatusResponse {
+  message Reply {
+    enum Status {
+      UP = 0;
+      DOWN = 1;
+    }
+    string path = 1;
+    Status status = 2;
+  }
+  repeated Reply sequence = 1;
+}
+
+
 service HubService {
   rpc ctrl_ping(CtrlPingRequest) returns (CtrlPingResponse);
+  rpc balance(BalanceRequest) returns (BalanceResponse);
+  rpc top_up(TopUpRequest) returns (TopUpResponse);
+  rpc info_station(InfoStationRequest) returns (InfoStationResponse);
+  rpc locate_station(LocateStationRequest) returns (LocateStationResponse);
+  rpc bike_up(BikeRequest) returns (BikeResponse);
+  rpc bike_down(BikeRequest) returns (BikeResponse);
+  rpc sys_status(SysStatusRequest) returns (SysStatusResponse);
 }
