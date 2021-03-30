@@ -41,14 +41,16 @@ public class RecordMain {
 		try{
 			server.start();
 		}
-		catch(Exception e){
-			System.out.println(e);
+		catch(java.io.IOException e){
+			System.err.println("The server couldn't start due to a IOException!");
+			return;
 		}
 		try{
 			zkNaming.rebind("/grpc/bicloin/rec/" + instanceNumber , serv , Integer.toString(port));
 		}
-		catch(Exception e){
-			System.out.println(e);
+		catch(pt.ulisboa.tecnico.sdis.zk.ZKNamingException e){
+			System.err.println("Zookeeper bind not possible due to a NamingException!");
+			return;
 		}
 
 		// Server threads are running in the background.
@@ -58,8 +60,8 @@ public class RecordMain {
 		try{
 			server.awaitTermination();
 		}
-		catch(Exception e){
-			System.out.println(e);
+		catch(java.lang.InterruptedException e){
+			System.err.println("The server was interrupted!");
 		}
 
 	}

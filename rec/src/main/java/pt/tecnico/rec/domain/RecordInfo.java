@@ -10,7 +10,9 @@ public class RecordInfo{
     private Map<String, Any> values;
 
     public synchronized Any getValue(String key){
-        return values.get(key);
+        Any response =  values.get(key);
+        if (response == null) { writeValue(key,null);}
+        return response;
     }
 
     public synchronized void writeValue(String key, Any value){
