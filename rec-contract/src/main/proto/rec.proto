@@ -4,6 +4,28 @@
 syntax = "proto3";
 package pt.tecnico.rec.grpc;
 
+//read service
+
+message ReadRequest {
+  string name = 1;
+}
+
+message ReadResponse {
+  int32 value = 1;
+}
+
+//write service
+
+message WriteRequest {
+  string name = 1;
+  int32 value = 2;
+}
+
+message WriteResponse {
+}
+
+// ping service
+
 message CtrlPingRequest {
   string input = 1;
 }
@@ -14,4 +36,6 @@ message CtrlPingResponse {
   
 service RecordService {
   rpc ctrl_ping(CtrlPingRequest) returns (CtrlPingResponse);
+  rpc read(ReadRequest) returns (ReadResponse);
+  rpc write(WriteRequest) returns (WriteResponse);
 }
