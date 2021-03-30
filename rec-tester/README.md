@@ -3,7 +3,7 @@
 
 ## Authors
 
-Group CXX
+Group A43
 
 *(fill-in line above with group identifier e.g. A07 or T22; and then delete this line)*
 

@@ -3,7 +3,7 @@
 
 ## Authors
 
-Group CXX
+Group A43
 
 
 ## About

@@ -3,9 +3,7 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<!-- Please replace 'CXX' below with your C (campus) with A (Alameda) / 
-	T (Tagus); and your group number with two digits. Then delete this comment. -->
-	<groupId>pt.tecnico.bicloin.CXX</groupId>
+	<groupId>pt.tecnico.bicloin.A43</groupId>
 	<artifactId>Bicloin</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
@@ -33,7 +31,7 @@
 		<version.maven-enforcer-plugin>3.0.0-M3</version.maven-enforcer-plugin>
 		<version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
 
-		<group.id>CXX</group.id>
+		<group.id>A43</group.id>
 	</properties>
 
 	<!-- Modules are subcomponents of the project. 
@@ -42,7 +40,7 @@
 		builds the selected projects in order. -->
 	<modules>
 		<!-- Add later, when needed... -->
-		<!--module>zknaming</module-->
+		<module>zknaming</module>
 		<module>rec-contract</module>
 		<module>rec</module>
 		<module>rec-tester</module>

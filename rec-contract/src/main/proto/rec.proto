@@ -4,6 +4,8 @@
 syntax = "proto3";
 package pt.tecnico.rec.grpc;
 
+import "google/protobuf/any.proto";
+
 //read service
 
 message ReadRequest {
@@ -11,14 +13,14 @@ message ReadRequest {
 }
 
 message ReadResponse {
-  int32 value = 1;
+  google.protobuf.Any value = 1;
 }
 
 //write service
 
 message WriteRequest {
   string name = 1;
-  int32 value = 2;
+  google.protobuf.Any value = 2;
 }
 
 message WriteResponse {
