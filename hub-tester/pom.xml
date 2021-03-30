@@ -3,8 +3,6 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<!-- Please replace 'A43' below with your C (campus) with A (Alameda) /
-	T (Tagus); and your group number with two digits. Then delete this comment. -->
 	<parent>
 		<groupId>pt.tecnico.bicloin.A43</groupId>
 		<artifactId>Bicloin</artifactId>
