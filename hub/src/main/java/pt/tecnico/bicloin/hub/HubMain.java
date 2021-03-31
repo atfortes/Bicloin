@@ -4,6 +4,7 @@ package pt.tecnico.bicloin.hub;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import pt.ulisboa.tecnico.sdis.zk.*;
 
 import java.io.IOException;
 
@@ -32,15 +33,11 @@ public class HubMain {
 		final String serv = args[2];
 		final int port = Integer.parseInt(args[3]);
 		final int instanceNumber = Integer.parseInt(args[4]);
-		final String file_1 = args[5];
-		final String file_2 = args[6];
-		final boolean initRec = args.length == 8 && args[7].equals("initRec") ? true : false;
+		final String usersFile = args[5];
+		final String stationsFile = args[6];
+		final boolean initRec = args.length == 8 && args[7].equals("initRec");
 
-		// TODO FIXME see files
-
-		// TODO FIXME contact rec if "initRec"
-
-		final BindableService impl = new HubMainImpl();
+		final BindableService impl = new HubMainImpl(usersFile, stationsFile, initRec);
 
 		// Create a new server to listen on port
 		Server server = ServerBuilder.forPort(port).addService(impl).build();
@@ -49,8 +46,8 @@ public class HubMain {
 		try{
 			server.start();
 		}
-		catch(IOException e) {
-			System.err.println("Caught exception when starting the server: " + e);
+		catch(IOException ie) {
+			System.err.println("Caught exception when starting the server: " + ie);
 			return;
 		}
 

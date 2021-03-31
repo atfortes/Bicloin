@@ -2,6 +2,7 @@ package pt.tecnico.bicloin.hub.domain;
 
 public class Station {
 
+    private final String name;
     private final String id;
     private final float latitude;
     private final float longitude;
@@ -9,12 +10,17 @@ public class Station {
     private final int award;
 
 
-    public Station(String id, float latitude, float longitude, int capacity, int award) {
+    public Station(String name, String id, float latitude, float longitude, int capacity, int award) {
+        this.name = name;
         this.id = id;
         this.latitude = latitude;
         this.longitude = longitude;
         this.capacity = capacity;
         this.award = award;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public String getId() {

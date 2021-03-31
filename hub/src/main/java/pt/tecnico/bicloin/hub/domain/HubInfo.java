@@ -3,20 +3,24 @@ package pt.tecnico.bicloin.hub.domain;
 
 import java.util.HashMap;
 import java.util.ArrayList;
-import java.lang.Double;
+import java.util.List;
 
 
 public class HubInfo {
 
-    private HashMap<String, Station> stations;
     private HashMap<String, User> users;
-
-    public HubInfo() {
-        // TODO import data from csv
-    }
+    private HashMap<String, Station> stations;
 
     public Station getStation(String id) {
         return stations.get(id);
+    }
+
+    public void setUsers(List<User> userList) {
+        for (User u : userList) { users.put(u.getUsername(), u); }
+    }
+
+    public void setStations(List<Station> stationList) {
+        for (Station s : stationList) { stations.put(s.getId(), s); }
     }
 
     public ArrayList<String> sort_stations(int k, float lat, float lon) {
@@ -28,14 +32,12 @@ public class HubInfo {
                 //s1.haversine_distance(lat, lon).compareTo(s2.haversine_distance(lat, lon)));
 
         ArrayList<String> res = new ArrayList<>();
-        // assuming k < #stations
-        for (int i = 0; i < k; i++) {
+
+        for (int i = 0; i < Math.min(k, stations.size()); i++) {
             res.add(gather.get(i).getId());
         }
 
         return res;
     }
-
-
 
 }

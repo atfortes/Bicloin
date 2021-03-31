@@ -19,8 +19,13 @@
 
 		<mainclass>pt.tecnico.bicloin.hub.HubMain</mainclass>
 
+		<zook.serv>localhost</zook.serv>
+		<zook.port>2181</zook.port>
+		<hub.serv>localhost</hub.serv>
 		<hub.i>1</hub.i><!-- instance number -->
 		<hub.port>808${hub.i}</hub.port>
+		<file.users>users.csv</file.users>
+		<file.stations>stations.csv</file.stations>
 	</properties>
 
 	<!-- Dependencies are code archives - JARs - on which your current module needs in order to compile, build, test, and/or to run. 
@@ -31,6 +36,12 @@
 			<groupId>${project.groupId}</groupId>
 			<artifactId>hub-contract</artifactId>
 			<version>1.0.0-SNAPSHOT</version>
+		</dependency>
+		<!-- Library to simplify the access to Apache ZooKeeper with simple naming operations. -->
+		<dependency>
+			<groupId>pt.ulisboa.tecnico.sdis</groupId>
+			<artifactId>zk-naming</artifactId>
+			<version>1.0.4</version>
 		</dependency>
 	</dependencies>
 
@@ -79,7 +90,13 @@
 					<killAfter>-1</killAfter>
 					<mainClass>${mainclass}</mainClass>
 					<arguments>
+						<argument>${zook.serv}</argument>
+						<argument>${zook.port}</argument>
+						<argument>${hub.serv}</argument>
 						<argument>${hub.port}</argument>
+						<argument>${hub.i}</argument>
+						<argument>${file.users}</argument>
+						<argument>${file.stations}</argument>
 					</arguments>
 				</configuration>
 			</plugin>
