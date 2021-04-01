@@ -157,4 +157,16 @@ public class App {
         return res;
     }
 
+    public String ping() {
+        // TODO
+        return "";
+    }
+
+
+    public String sys_status() {
+        // TODO
+        return "";
+    }
+
+
 }

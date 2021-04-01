@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 import io.grpc.stub.StreamObserver;
+import io.grpc.Status;
 import pt.tecnico.bicloin.hub.grpc.*;
 import pt.tecnico.bicloin.hub.domain.*;
 
@@ -71,20 +72,25 @@ public class HubMainImpl extends HubServiceGrpc.HubServiceImplBase {
 
         String id = request.getStationId();
         Station station = hub.getStation(id);
-        // need to set attributes, requires implementing Station
 
-        InfoStationResponse.Builder builder = InfoStationResponse.newBuilder();
-        builder.setName(id);
-        builder.setLatitude(station.getLatitude());
-        builder.setLongitude(station.getLongitude());
-        builder.setCapacity(station.getCapacity());
-        builder.setAward(station.getAward());
-        //  TODO set bikes, pickups, deliveries from reg
+        if (station == null) {
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
+        }
 
-        // Send a single response through the stream.
-        responseObserver.onNext(builder.build());
-        // Notify the client that the operation has been completed.
-        responseObserver.onCompleted();
+        else {
+            InfoStationResponse.Builder builder = InfoStationResponse.newBuilder();
+            builder.setName(id);
+            builder.setLatitude(station.getLatitude());
+            builder.setLongitude(station.getLongitude());
+            builder.setCapacity(station.getCapacity());
+            builder.setAward(station.getAward());
+            //  TODO set bikes, pickups, deliveries from reg
+
+            // Send a single response through the stream.
+            responseObserver.onNext(builder.build());
+            // Notify the client that the operation has been completed.
+            responseObserver.onCompleted();
+        }
     }
 
     @Override
