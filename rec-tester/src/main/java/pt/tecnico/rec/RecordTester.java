@@ -17,16 +17,17 @@ public class RecordTester {
 		}
 
 		// Check arguments
-		if (args.length != 2) {
+		if (args.length != 3) {
 			System.err.println("ERROR incorrect number of arguments.");
-			System.err.printf("Usage: java %s host port %n", RecordTester.class.getName());
+			System.err.printf("Usage: java %s zooHost zooPort path %n", RecordTester.class.getName());
 			return;
 		}
 
-		final String host = args[0];
-		final int port = Integer.parseInt(args[1]);
+		final String zooHost = args[0];
+		final int zooPort = Integer.parseInt(args[1]);
+		final String path = args[2];
 
-		RecFrontend frontend = new RecFrontend(host, port);
+		RecFrontend frontend = new RecFrontend(zooHost, zooPort, path);
 
 		try {
 			Rec.CtrlPingRequest request = Rec.CtrlPingRequest.newBuilder().setInput("friend").build();

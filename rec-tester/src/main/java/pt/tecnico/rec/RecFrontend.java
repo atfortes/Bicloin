@@ -11,9 +11,9 @@ public class RecFrontend implements AutoCloseable {
     final ManagedChannel channel;
     RecordServiceGrpc.RecordServiceBlockingStub stub;
 
-    public RecFrontend(String zooHost, int zooPort) throws ZKNamingException {
+    public RecFrontend(String zooHost, int zooPort, String path) throws ZKNamingException {
         ZKNaming zkNaming = new ZKNaming(zooHost, String.valueOf(zooPort));
-        ZKRecord record = zkNaming.lookup("/grpc/bicloin/rec/1");   // FIXME hard coded ?
+        ZKRecord record = zkNaming.lookup(path);
         String target = record.getURI();
         channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
         stub = RecordServiceGrpc.newBlockingStub(channel);

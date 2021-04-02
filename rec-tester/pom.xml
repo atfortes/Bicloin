@@ -19,8 +19,9 @@
 
 		<mainclass>pt.tecnico.rec.RecordTester</mainclass>
 
-		<rec.host>localhost</rec.host>
-		<rec.port>8091</rec.port>
+		<zook.serv>localhost</zook.serv>
+		<zook.port>2181</zook.port>
+		<path>/grpc/bicloin/rec/1</path>
 	</properties>
 
 	<!-- Dependencies are code archives - JARs - on which your current module needs in order to compile, build, test, and/or to run. 
@@ -103,8 +104,9 @@
 				<configuration>
 					<mainClass>${mainclass}</mainClass>
 					<arguments>
-						<argument>${rec.host}</argument>
-						<argument>${rec.port}</argument>
+						<argument>${zook.serv}</argument>
+						<argument>${zook.port}</argument>
+						<argument>${path}</argument>
 					</arguments>
 				</configuration>
 			</plugin>
