@@ -4,6 +4,7 @@ import java.util.Scanner;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
+import pt.tecnico.bicloin.app.exceptions.BikePickupAndDropOffException;
 import pt.tecnico.bicloin.hub.grpc.HubServiceGrpc;
 import pt.ulisboa.tecnico.sdis.zk.*;
 
@@ -21,8 +22,7 @@ public class AppMain {
 		// Check arguments
 		if (args.length != 6) {
 			System.err.println("ERROR incorrect number of arguments.");
-
-			// FIXME System.err.printf("Usage: java %s port%n", AppMain.class.getName());
+			System.err.printf("Usage: java %s zk_ip zk_port uid phone lat long%n", AppMain.class.getName());
 			return;
 		}
 
@@ -36,7 +36,7 @@ public class AppMain {
 		String target = "";
 
 		try {
-			// FIXME not sure this is correct shouldn't need to use 1
+			// FIXME get correct hub from zk
 			target = zkNaming.lookup("grpc/bicloin/hub/1").getURI();
 
 		} catch (ZKNamingException e) {
@@ -48,13 +48,12 @@ public class AppMain {
 		HubServiceGrpc.HubServiceBlockingStub stub = HubServiceGrpc.newBlockingStub(channel);
 		App app = new App(lat, lon, uid, phone, stub);
 
-
 		Scanner in = new Scanner(System.in);
-		System.out.print(">");
-		while (in.hasNextLine()) {
+
+		do {
+			System.out.print("> ");
 			command(in.nextLine(), app);
-			System.out.print(">");
-		}
+		} while (in.hasNextLine());
 
 		in.close();
 		channel.shutdownNow();
@@ -87,23 +86,42 @@ public class AppMain {
 				System.out.println(app.ping());
 			} else if (content.length == 1 && content[0].equals("sys_status")) {
 				System.out.println(app.sys_status());
+			} else if (content.length == 1 && content[0].equals("help")) {
+				System.out.println(help());
 			} else if (content.length == 2 && content[0].equals("zzz")) {
+				System.out.printf("sleeping for %s%n", content[1]);
 				Thread.sleep(Integer.parseInt(content[1]));
-				System.out.printf("Sleeping for %s%n", content[1]);
 			} else if (content.length == 0 || content[0].equals("#")) {
 				// skip comments and empty lines
 				assert true;
-			} else throw new Exception();
-			// FIXME implement new Exception
+			} else System.out.println("incorrect usage, try >help");
 
 
 		} catch (NumberFormatException e) {
-			System.out.println("Invalid parameters, try >help");
+			System.out.println("incorrect usage, try >help");
 		} catch (StatusRuntimeException e) {
 			System.out.println(e.getStatus().getDescription());
+		} catch (BikePickupAndDropOffException e) {
+			System.out.println(e.getMessage());
 		} catch (Exception e) {
-			System.out.println("Unknown exception");
+			System.out.println("unexpected exception");
 		}
+	}
+
+	private static String help() {
+		return "Application usage:\n" +
+				"> balance\n" +
+				"> top-up amount\n" +
+				"> tag lat long name\n" +
+				"> move name\n" +
+				"> at\n" +
+				"> scan n\n" +
+				"> info station-id\n" +
+				"> bike-up station-id\n" +
+				"> bike-down station-id\n" +
+				"> ping\n" +
+				"> sys_status\n" +
+				"> zzz time(ms)\n";
 	}
 
 }

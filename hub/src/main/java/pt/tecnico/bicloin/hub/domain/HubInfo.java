@@ -8,8 +8,8 @@ import java.util.List;
 
 public class HubInfo {
 
-    private HashMap<String, User> users;
-    private HashMap<String, Station> stations;
+    private HashMap<String, User> users = new HashMap<>();
+    private HashMap<String, Station> stations = new HashMap<>();
 
     public Station getStation(String id) {
         return stations.get(id);

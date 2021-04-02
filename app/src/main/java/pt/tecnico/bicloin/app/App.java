@@ -1,5 +1,6 @@
 package pt.tecnico.bicloin.app;
 
+import pt.tecnico.bicloin.app.exceptions.BikePickupAndDropOffException;
 import pt.tecnico.bicloin.hub.grpc.*;
 
 import java.util.ArrayList;
@@ -47,7 +48,6 @@ public class App {
 
     public String tag(float lat, float lon, String name) {
 
-        // FIXME could be cleaner
         ArrayList<Float> place = new ArrayList<>();
         place.add(lat);
         place.add(lon);
@@ -81,9 +81,8 @@ public class App {
             String sid = resp.getIds(i);
 
             // FIXME infostation request n tem distancia para o user, implementar um novo metodo remoto?
-            // devolver apenas os station ids parece dumb
             InfoStationResponse station = stub.infoStation(InfoStationRequest.newBuilder().setStationId(sid).build());
-            res.append(String.format("%s, lat %f, long %f, %d docas, %f BIC prémio, %d bicicletas, a %d metros",
+            res.append(String.format("%s, lat %f, long %f, %d docas, %f BIC prémio, %d bicicletas, a %d metros\n",
                     sid, station.getLatitude(), station.getLongitude(), station.getCapacity(), station.getAward(), station.getBikes(), 0));
 
         }
@@ -103,7 +102,7 @@ public class App {
     }
 
 
-    public String bikeUp(String name) {
+    public String bikeUp(String name) throws BikePickupAndDropOffException {
 
         BikeRequest.Builder builder = BikeRequest.newBuilder();
         builder.setUsername(id);
@@ -112,26 +111,21 @@ public class App {
         builder.setStationId(name);
         BikeResponse.Response resp = stub.bikeUp(builder.build()).getResponse();
 
-        String res = "";
-
-        // FIXME kinda ugly
-
         switch (resp) {
             case OK:
-                res = "OK";
             case OUT_OF_RANGE:
-                res = "ERRO fora de alcance";
+                throw new BikePickupAndDropOffException("ERRO fora de alcance");
             case ALREADY_HAS_BIKE:
-                res = "ERRO já tem bicicleta";
+                throw new BikePickupAndDropOffException("ERRO já tem bicicleta");
             case NO_BIKES_IN_STATION:
-                res = "ERRO estação sem bicicletas";
+                throw new BikePickupAndDropOffException("ERRO estação sem bicicletas");
         }
 
-        return res;
+        return "OK";
     }
 
 
-    public String bikeDown(String name) {
+    public String bikeDown(String name) throws BikePickupAndDropOffException {
 
         BikeRequest.Builder builder = BikeRequest.newBuilder();
         builder.setUsername(id);
@@ -140,21 +134,17 @@ public class App {
         builder.setStationId(name);
         BikeResponse.Response resp = stub.bikeUp(builder.build()).getResponse();
 
-        String res = "";
-        // FIXME kinda ugly
-
         switch (resp) {
             case OK:
-                res = "OK";
             case OUT_OF_RANGE:
-                res = "ERRO fora de alcance";
+                throw new BikePickupAndDropOffException("ERRO fora de alcance");
             case NO_BIKE_REQUESTED:
-                res = "ERRO não tem bicicleta";
+                throw new BikePickupAndDropOffException("ERRO não tem bicicleta");
             case STATION_IS_FULL:
-                res = "ERRO estação sem lugares disponíveis";
+                throw new BikePickupAndDropOffException("ERRO estação sem capacidade");
         }
 
-        return res;
+        return "OK";
     }
 
     public String ping() {
