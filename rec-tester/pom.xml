@@ -39,7 +39,13 @@
 			<version>${version.junit}</version>
 			<scope>test</scope>
 		</dependency>
-	</dependencies>
+        <dependency>
+            <groupId>pt.ulisboa.tecnico.sdis</groupId>
+            <artifactId>zk-naming</artifactId>
+            <version>1.0.4</version>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
 
 	<build>
 		<!-- Resources are files like properties, images, etc; used by the module.  -->
