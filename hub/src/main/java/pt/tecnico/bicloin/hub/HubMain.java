@@ -8,9 +8,7 @@ import pt.tecnico.bicloin.hub.domain.Station;
 import pt.tecnico.bicloin.hub.domain.User;
 import pt.ulisboa.tecnico.sdis.zk.*;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -96,7 +94,7 @@ public class HubMain {
 		// Use hook to register a thread to be called on shutdown.
 		Runtime.getRuntime().addShutdownHook(new Unbind());
 
-		System.out.println("Server started and awaiting requests on port " + port);
+		System.out.println("Server started and awaiting requests on port " + port + ".");
 
 		// Do not exit the main thread. Wait until server is terminated.
 		try{
@@ -111,7 +109,7 @@ public class HubMain {
 	private static void importUsers() throws IOException {
 		BufferedReader br = null;
 		try {
-			br = new BufferedReader(new FileReader(usersFile));
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(System.getProperty("user.dir") + "/" + usersFile)));
 
 			String line = "";
 			while ((line = br.readLine()) != null) {
@@ -141,7 +139,7 @@ public class HubMain {
 	private static void importStations() throws IOException {
 		BufferedReader br = null;
 		try {
-			br = new BufferedReader(new FileReader(stationsFile));
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(System.getProperty("user.dir") + "/" + stationsFile)));
 
 			String line = "";
 			while ((line = br.readLine()) != null) {

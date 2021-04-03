@@ -7,7 +7,7 @@ import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 public class RecordTester {
 	
-	public static void main(String[] args) throws ZKNamingException {
+	public static void main(String[] args) {
 		System.out.println(RecordTester.class.getSimpleName());
 		
 		// receive and print arguments
@@ -27,18 +27,23 @@ public class RecordTester {
 		final int zooPort = Integer.parseInt(args[1]);
 		final String path = args[2];
 
-		RecFrontend frontend = new RecFrontend(zooHost, zooPort, path);
-
+		RecFrontend frontend = null;
 		try {
+			frontend = new RecFrontend(zooHost, zooPort, path);
+
 			Rec.CtrlPingRequest request = Rec.CtrlPingRequest.newBuilder().setInput("friend").build();
 			Rec.CtrlPingResponse response = frontend.ctrlPing(request);
 			System.out.println(response.getOutput());
 
+		} catch (ZKNamingException e) {
+			System.err.println("Caught exception when searching for Rec: " + e);
 		} catch (StatusRuntimeException e) {
 			System.err.println("Caught exception with description: " + e.getStatus().getDescription());
 		}
 
-		frontend.close();
+		if (frontend != null) {
+			frontend.close();
+		}
 	}
 	
 }

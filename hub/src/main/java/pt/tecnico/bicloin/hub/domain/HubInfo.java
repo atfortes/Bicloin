@@ -11,6 +11,10 @@ public class HubInfo {
     private HashMap<String, User> users = new HashMap<>();
     private HashMap<String, Station> stations = new HashMap<>();
 
+    public User getUser(String username) {
+        return users.get(username);
+    }
+
     public Station getStation(String id) {
         return stations.get(id);
     }

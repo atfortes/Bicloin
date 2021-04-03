@@ -3,14 +3,30 @@ package pt.tecnico.bicloin.hub;
 
 import java.util.List;
 import java.util.logging.Logger;
+
+import com.google.protobuf.Any;
+import com.google.protobuf.Int32Value;
+import com.google.protobuf.InvalidProtocolBufferException;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import io.grpc.Status;
+import org.apache.commons.lang.enums.EnumUtils;
 import pt.tecnico.bicloin.hub.grpc.*;
 import pt.tecnico.bicloin.hub.domain.*;
+import pt.tecnico.rec.RecFrontend;
+import pt.tecnico.rec.grpc.Rec;
+import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
     private static final Logger LOGGER = Logger.getLogger(HubImpl.class.getName());
+
+    // FIXME hard coded ?
+    private final String zooHost = "localhost";
+    private final int zooPort = 2181;
+    private final String recPath = "/grpc/bicloin/rec/1";
+
+    private final int euro2bic = 10;
 
     private HubInfo hub = new HubInfo();
 
@@ -21,24 +37,86 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
     @Override
     public void balance(BalanceRequest request, StreamObserver<BalanceResponse> responseObserver) {
-        // TODO
-        BalanceResponse response = BalanceResponse.newBuilder().build();
 
-        // Send a single response through the stream.
-        responseObserver.onNext(response);
-        // Notify the client that the operation has been completed.
-        responseObserver.onCompleted();
+        String username = request.getUsername();
+        User user = hub.getUser(username);
+        if (user == null) {
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
+            return;
+        }
+
+        RecFrontend frontend = null;
+        try {
+            frontend = new RecFrontend(zooHost, zooPort, recPath);
+
+            Rec.ReadResponse res = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/balance").build());
+            Int32Value balance = res.getValue().unpack(Int32Value.class);
+            BalanceResponse response = BalanceResponse.newBuilder().setBalance(balance.getValue()).build();
+
+            // Send a single response through the stream.
+            responseObserver.onNext(response);
+            // Notify the client that the operation has been completed.
+            responseObserver.onCompleted();
+
+        } catch (ZKNamingException e) {
+            System.err.println("Caught exception when searching for Rec: " + e);
+        } catch (StatusRuntimeException e) {
+            System.err.println("Caught exception with description: " + e.getStatus().getDescription());
+        } catch (InvalidProtocolBufferException e) {
+            System.err.println("Caught when unpacking data from Rec: " + e);
+        } finally {
+            if (frontend != null) {
+                frontend.close();
+            }
+        }
     }
 
     @Override
     public void topUp(TopUpRequest request, StreamObserver<TopUpResponse> responseObserver) {
-        // TODO
-        TopUpResponse response = TopUpResponse.newBuilder().build();
 
-        // Send a single response through the stream.
-        responseObserver.onNext(response);
-        // Notify the client that the operation has been completed.
-        responseObserver.onCompleted();
+        String username = request.getUsername();
+        User user = hub.getUser(username);
+        if (user == null) {
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
+            return;
+        }
+        if (!request.getPhoneNumber().equals(user.getPhone())) {
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Phone number incorrect").asRuntimeException());
+            return;
+        }
+        int amount = request.getAmount();
+        if (!(1 <= amount && amount <= 20)) {
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Amount not in 1-20 interval").asRuntimeException());
+            return;
+        }
+
+        RecFrontend frontend = null;
+        try {
+            frontend = new RecFrontend(zooHost, zooPort, recPath);
+
+            Rec.ReadResponse res = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/balance").build());
+            Int32Value balance = res.getValue().unpack(Int32Value.class);
+            Int32Value newBalance = Int32Value.newBuilder().setValue(balance.getValue() + amount*euro2bic).build();
+            frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + username + "/balance").setValue(Any.pack(newBalance)).build());
+
+            TopUpResponse response = TopUpResponse.newBuilder().setBalance(balance.getValue()).build();
+
+            // Send a single response through the stream.
+            responseObserver.onNext(response);
+            // Notify the client that the operation has been completed.
+            responseObserver.onCompleted();
+
+        } catch (ZKNamingException e) {
+            System.err.println("Caught exception when searching for Rec: " + e);
+        } catch (StatusRuntimeException e) {
+            System.err.println("Caught exception with description: " + e.getStatus().getDescription());
+        } catch (InvalidProtocolBufferException e) {
+            System.err.println("Caught when unpacking data from Rec: " + e);
+        } finally {
+            if (frontend != null) {
+                frontend.close();
+            }
+        }
     }
 
     @Override
