@@ -18,7 +18,6 @@
 		<!-- see parent POM for more properties -->
 
 		<mainclass>pt.tecnico.bicloin.hub.HubMain</mainclass>
-
 		<zook.serv>localhost</zook.serv>
 		<zook.port>2181</zook.port>
 		<hub.serv>localhost</hub.serv>

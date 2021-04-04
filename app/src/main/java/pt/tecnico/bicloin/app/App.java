@@ -148,8 +148,11 @@ public class App {
     }
 
     public String ping() {
-        // TODO
-        return "";
+
+        CtrlPingRequest.Builder builder = CtrlPingRequest.newBuilder();
+        builder.setInput("hello");
+        CtrlPingResponse resp = stub.ctrlPing(builder.build());
+        return "received: " + resp.getOutput();
     }
 
 

@@ -50,13 +50,21 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
             frontend = new RecFrontend(zooHost, zooPort, recPath);
 
             Rec.ReadResponse res = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/balance").build());
-            Int32Value balance = res.getValue().unpack(Int32Value.class);
-            BalanceResponse response = BalanceResponse.newBuilder().setBalance(balance.getValue()).build();
+            if (res.getValue().is(Int32Value.class)) {
+                Int32Value balance = res.getValue().unpack(Int32Value.class);
+                BalanceResponse response = BalanceResponse.newBuilder().setBalance(balance.getValue()).build();
 
-            // Send a single response through the stream.
-            responseObserver.onNext(response);
-            // Notify the client that the operation has been completed.
-            responseObserver.onCompleted();
+                // Send a single response through the stream.
+                responseObserver.onNext(response);
+                // Notify the client that the operation has been completed.
+                responseObserver.onCompleted();
+            }
+
+            else {
+                responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Balance not found").asRuntimeException());
+            }
+
+
 
         } catch (ZKNamingException e) {
             System.err.println("Caught exception when searching for Rec: " + e);
@@ -182,5 +190,20 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         // Notify the client that the operation has been completed.
         responseObserver.onCompleted();
     }
+
+    @Override
+    public void ctrlPing(CtrlPingRequest request, StreamObserver<CtrlPingResponse> responseObserver) {
+        LOGGER.info("Received Ping");
+        String input = request.getInput();
+        responseObserver.onNext(CtrlPingResponse.newBuilder().setOutput(input).build());
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void sysStatus(SysStatusRequest request, StreamObserver<SysStatusResponse> responseObserver) {
+        // TODO
+    }
+
+
 
 }

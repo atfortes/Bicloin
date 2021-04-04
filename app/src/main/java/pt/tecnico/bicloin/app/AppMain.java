@@ -37,8 +37,7 @@ public class AppMain {
 
 		try {
 			// FIXME get correct hub from zk
-			target = zkNaming.lookup("grpc/bicloin/hub/1").getURI();
-
+			target = zkNaming.lookup("/grpc/bicloin/hub/1").getURI();
 		} catch (ZKNamingException e) {
 			System.err.println(e.getMessage());
 		}

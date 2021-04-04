@@ -22,7 +22,12 @@ public class RecordMainImpl extends RecordServiceGrpc.RecordServiceImplBase {
         LOGGER.info("Read: " + name);
         Any value = rec.getValue(name);
         LOGGER.info("Value: " + value);
-        responseObserver.onNext(Rec.ReadResponse.newBuilder().setValue(value).build());
+        if (value == null) {
+            responseObserver.onNext(Rec.ReadResponse.newBuilder().build());
+        }
+        else {
+            responseObserver.onNext(Rec.ReadResponse.newBuilder().setValue(value).build());
+        }
         responseObserver.onCompleted();
     }
 

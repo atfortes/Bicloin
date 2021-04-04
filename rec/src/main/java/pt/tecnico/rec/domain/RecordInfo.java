@@ -2,16 +2,17 @@ package pt.tecnico.rec.domain;
 
 import com.google.protobuf.Any;
 
-import java.util.Map;
+import java.util.HashMap;
 
 /** Domain root, where state and behavior of the server are implemented. */
 public class RecordInfo{
 
-    private Map<String, Any> values;
+    private HashMap<String, Any> values = new HashMap<>();
 
     public synchronized Any getValue(String key){
+
         Any response =  values.get(key);
-        if (response == null) { writeValue(key,null);}
+        if (response == null) { writeValue(key, Any.newBuilder().build());}
         return response;
     }
 

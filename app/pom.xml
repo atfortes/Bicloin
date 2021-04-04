@@ -16,6 +16,12 @@
 	<!-- Properties are variables used to customize the behavior of Maven and its plug-ins. -->
 	<properties>
 		<mainclass>pt.tecnico.bicloin.app.AppMain</mainclass>
+		<zook.serv>localhost</zook.serv>
+		<zook.port>2181</zook.port>
+		<user.id>alice</user.id>
+		<user.phone>+35191102030</user.phone><!-- instance number -->
+		<user.lat>38.7380</user.lat>
+		<user.lon>-9.3000</user.lon>
 	</properties>
 
 	<!-- Dependencies are code archives - JARs - on which your current module needs in order to compile, build, test, and/or to run. 
@@ -98,6 +104,12 @@
 				<configuration>
 					<mainClass>${mainclass}</mainClass>
 					<arguments>
+						<argument>${zook.serv}</argument>
+						<argument>${zook.port}</argument>
+						<argument>${user.id}</argument>
+						<argument>${user.phone}</argument>
+						<argument>${user.lat}</argument>
+						<argument>${user.lon}</argument>
 					</arguments>
 				</configuration>
 			</plugin>
