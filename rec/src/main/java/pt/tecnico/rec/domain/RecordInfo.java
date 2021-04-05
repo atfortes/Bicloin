@@ -10,7 +10,6 @@ public class RecordInfo{
     private HashMap<String, Any> values = new HashMap<>();
 
     public synchronized Any getValue(String key){
-
         Any response =  values.get(key);
         if (response == null) { writeValue(key, Any.newBuilder().build());}
         return response;
