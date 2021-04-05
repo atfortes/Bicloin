@@ -21,18 +21,16 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
     private static final Logger LOGGER = Logger.getLogger(HubImpl.class.getName());
 
-    // FIXME hard coded ?
-    private final String zooHost = "localhost";
-    private final int zooPort = 2181;
-    private final String recPath = "/grpc/bicloin/rec/1";
-
     private final int euro2bic = 10;
 
     private HubInfo hub = new HubInfo();
 
-    public HubImpl(List<User> userList, List<Station> stationList) {
+    private RecFrontend frontend;
+
+    public HubImpl(List<User> userList, List<Station> stationList, RecFrontend frontend) {
         hub.setUsers(userList);
         hub.setStations(stationList);
+        this.frontend = frontend;
     }
 
     @Override
@@ -45,9 +43,7 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
             return;
         }
 
-        RecFrontend frontend = null;
         try {
-            frontend = new RecFrontend(zooHost, zooPort, recPath);
 
             Rec.ReadResponse res = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/balance").build());
             if (res.getValue().is(Int32Value.class)) {
@@ -59,23 +55,14 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
                 // Notify the client that the operation has been completed.
                 responseObserver.onCompleted();
             }
-
             else {
                 responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Balance not found").asRuntimeException());
             }
 
-
-
-        } catch (ZKNamingException e) {
-            System.err.println("Caught exception when searching for Rec: " + e);
         } catch (StatusRuntimeException e) {
             System.err.println("Caught exception with description: " + e.getStatus().getDescription());
         } catch (InvalidProtocolBufferException e) {
             System.err.println("Caught when unpacking data from Rec: " + e);
-        } finally {
-            if (frontend != null) {
-                frontend.close();
-            }
         }
     }
 
@@ -98,32 +85,30 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
             return;
         }
 
-        RecFrontend frontend = null;
         try {
-            frontend = new RecFrontend(zooHost, zooPort, recPath);
 
             Rec.ReadResponse res = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/balance").build());
-            Int32Value balance = res.getValue().unpack(Int32Value.class);
-            Int32Value newBalance = Int32Value.newBuilder().setValue(balance.getValue() + amount*euro2bic).build();
-            frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + username + "/balance").setValue(Any.pack(newBalance)).build());
+            if (res.getValue().is(Int32Value.class)) {
 
-            TopUpResponse response = TopUpResponse.newBuilder().setBalance(balance.getValue()).build();
+                Int32Value balance = res.getValue().unpack(Int32Value.class);
+                Int32Value newBalance = Int32Value.newBuilder().setValue(balance.getValue() + amount*euro2bic).build();
+                frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + username + "/balance").setValue(Any.pack(newBalance)).build());
 
-            // Send a single response through the stream.
-            responseObserver.onNext(response);
-            // Notify the client that the operation has been completed.
-            responseObserver.onCompleted();
+                TopUpResponse response = TopUpResponse.newBuilder().setBalance(newBalance.getValue()).build();
 
-        } catch (ZKNamingException e) {
-            System.err.println("Caught exception when searching for Rec: " + e);
+                // Send a single response through the stream.
+                responseObserver.onNext(response);
+                // Notify the client that the operation has been completed.
+                responseObserver.onCompleted();
+            }
+            else {
+                responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Balance not found").asRuntimeException());
+            }
+
         } catch (StatusRuntimeException e) {
             System.err.println("Caught exception with description: " + e.getStatus().getDescription());
         } catch (InvalidProtocolBufferException e) {
             System.err.println("Caught when unpacking data from Rec: " + e);
-        } finally {
-            if (frontend != null) {
-                frontend.close();
-            }
         }
     }
 

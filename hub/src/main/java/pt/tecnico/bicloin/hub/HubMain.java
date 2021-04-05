@@ -1,11 +1,16 @@
 package pt.tecnico.bicloin.hub;
 
 
+import com.google.protobuf.Any;
+import com.google.protobuf.BoolValue;
+import com.google.protobuf.Int32Value;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import pt.tecnico.bicloin.hub.domain.Station;
 import pt.tecnico.bicloin.hub.domain.User;
+import pt.tecnico.rec.RecFrontend;
+import pt.tecnico.rec.grpc.Rec;
 import pt.ulisboa.tecnico.sdis.zk.*;
 
 import java.io.*;
@@ -24,12 +29,13 @@ public class HubMain {
 	private static String usersFile;
 	private static String stationsFile;
 	private static boolean initRec;
+	private static String recPath = "/grpc/bicloin/rec/1";
 	private static List<User> userList = new ArrayList<>();
 	private static List<Station> stationList = new ArrayList<>();
 
 	public static void main(String[] args) {
 		System.out.println(HubMain.class.getSimpleName());
-		
+
 		// Receive and print arguments
 		System.out.printf("Received %d arguments%n", args.length);
 		for (int i = 0; i < args.length; i++) {
@@ -39,7 +45,8 @@ public class HubMain {
 		// Check arguments
 		if (args.length != 7 && args.length != 8) {
 			System.err.println("ERROR incorrect number of arguments.");
-			System.err.printf("Usage: java %s zooHost zooPort host port instanceNumber usersFile stationsFile [initRec]%n", HubMain.class.getName());
+			System.err.printf("Usage: java %s zooHost zooPort host port instanceNumber usersFile stationsFile " +
+					"[initRec]%n", HubMain.class.getName());
 			return;
 		}
 
@@ -55,117 +62,122 @@ public class HubMain {
 		stationsFile = args[6];
 		initRec = args.length == 8 && args[7].equals("initRec");
 
-		try {
-			importUsers();
-			importStations();
-		} catch (Exception e) {  // already treated in the respective methods
-			return;
-		}
+		try(RecFrontend frontend = new RecFrontend(zooHost, zooPort, recPath)) {
 
-		final BindableService impl = new HubImpl(userList, stationList);
+			importUsers(frontend);
+			importStations(frontend);
 
-		// Create a new server to listen on port
-		Server server = ServerBuilder.forPort(port).addService(impl).build();
+			final BindableService impl = new HubImpl(userList, stationList, frontend);
 
-		// Start the server
-		try{
-			server.start();
+			// Create a new server to listen on port
+			Server server = ServerBuilder.forPort(port).addService(impl).build();
 
-			// Server threads are running in the background.
-			System.out.println("Server started.");
-		}
-		catch(IOException ie) {
-			System.err.println("Caught exception when starting the server: " + ie);
-			return;
-		}
+			// Start the server
+			startServer(server);
 
-		// Register on ZooKeeper
-		try{
-			System.out.println("Contacting ZooKeeper at " + zooHost + ":" + zooPort + "...");
-			zkNaming = new ZKNaming(zooHost, String.valueOf(zooPort));
-			System.out.println("Binding " + path + " to " + host + ":" + port + "...");
-			zkNaming.rebind(path, host, String.valueOf(port));
-		}
-		catch(ZKNamingException e){
-			System.err.println("Caught exception during Zookeeper bind: " + e);
-			return;
-		}
+			// Register on ZooKeeper
+			registerZookeeper();
 
-		// Use hook to register a thread to be called on shutdown.
-		Runtime.getRuntime().addShutdownHook(new Unbind());
+			// Use hook to register a thread to be called on shutdown.
+			Runtime.getRuntime().addShutdownHook(new Unbind());
 
-		System.out.println("Server started and awaiting requests on port " + port + ".");
+			System.out.println("Server started and awaiting requests on port " + port + ".");
 
-		// Do not exit the main thread. Wait until server is terminated.
-		try{
+			// Do not exit the main thread. Wait until server is terminated.
 			server.awaitTermination();
-		}
-		catch(InterruptedException e){
-			System.err.println("Server was interrupted.");
-		}
 
+		} catch (ZKNamingException e) {
+			System.err.println("Caught exception during Zookeeper bind: " + e);
+		} catch(InterruptedException e){
+			System.err.println("Server was interrupted.");
+		} catch (IOException ie) {
+			System.err.println(ie.toString());
+		}
 	}
 
-	private static void importUsers() throws IOException {
-		BufferedReader br = null;
-		try {
-			br = new BufferedReader(new InputStreamReader(new FileInputStream(System.getProperty("user.dir") + "/" + usersFile)));
+	private static void importUsers(RecFrontend frontend) throws IOException {
+
+		try(BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(
+				System.getProperty("user.dir") + "/" + usersFile)))) {
 
 			String line = "";
 			while ((line = br.readLine()) != null) {
 				String[] userDetails = line.split(",");
 
 				if(userDetails.length > 0 ) {
-					// TODO if initRec
 					User u = new User(userDetails[0], userDetails[1], userDetails[2]);
 					userList.add(u);
+
+					if (initRec) {
+						frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + u.getUsername() + "/balance")
+								.setValue(Any.pack(Int32Value.newBuilder().setValue(0).build())).build());
+						frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + u.getUsername() + "/bike")
+								.setValue(Any.pack(BoolValue.newBuilder().setValue(false).build())).build());
+
+					}
 				}
 			}
-		}
-		catch(Exception e) {
-			System.err.println("Caught exception while parsing the users file: " + e);
-			throw e;
-		}
-		finally {
-			try {
-				if (br != null) { br.close(); }
-			}
-			catch(IOException ie) {
-				System.err.println("Caught exception while closing the BufferedReader: " + ie);
-			}
+
+		} catch(IOException ie) {
+			System.err.println("Caught exception while parsing the users file: ");
+			throw ie;
 		}
 	}
 
-	private static void importStations() throws IOException {
-		BufferedReader br = null;
-		try {
-			br = new BufferedReader(new InputStreamReader(new FileInputStream(System.getProperty("user.dir") + "/" + stationsFile)));
+	private static void importStations(RecFrontend frontend) throws IOException {
+
+		try(BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(
+				System.getProperty("user.dir") + "/" + stationsFile)))) {
 
 			String line = "";
 			while ((line = br.readLine()) != null) {
 				String[] stationDetails = line.split(",");
 
 				if(stationDetails.length > 0 ) {
-					// TODO if initRec
 					Station s = new Station(stationDetails[0], stationDetails[1], Float.parseFloat(stationDetails[2]),
 							Float.parseFloat(stationDetails[3]), Integer.parseInt(stationDetails[4]),
 							Integer.parseInt(stationDetails[6]));
 					stationList.add(s);
+
+					if (initRec) {
+						frontend.write(Rec.WriteRequest.newBuilder().setName("stations/" + s.getId() + "/bikes")
+								.setValue(Any.pack(Int32Value.newBuilder().setValue(Integer.parseInt(stationDetails[5]))
+										.build())).build());
+						frontend.write(Rec.WriteRequest.newBuilder().setName("stations/" + s.getId() + "/requests")
+								.setValue(Any.pack(Int32Value.newBuilder().setValue(0).build())).build());
+						frontend.write(Rec.WriteRequest.newBuilder().setName("stations/" + s.getId() + "/returns")
+								.setValue(Any.pack(Int32Value.newBuilder().setValue(0).build())).build());
+
+					}
 				}
 			}
+
+		} catch(IOException ie) {
+			System.err.println("Caught exception while parsing the stations file: ");
+			throw ie;
 		}
-		catch(Exception e) {
-			System.err.println("Caught exception while parsing the stations file: " + e);
-			throw e;
+	}
+
+	private static void startServer(Server server) throws IOException {
+		try{
+
+			server.start();
+
+			// Server threads are running in the background.
+			System.out.println("Server started.");
+
+		} catch(IOException ie) {
+			System.err.println("Caught exception when starting the server: ");
+			throw ie;
 		}
-		finally {
-			try {
-				if (br != null) { br.close(); }
-			}
-			catch(IOException ie) {
-				System.err.println("Caught exception while closing the BufferedReader: " + ie);
-			}
-		}
+	}
+
+	private static void registerZookeeper() throws ZKNamingException {
+
+		System.out.println("Contacting ZooKeeper at " + zooHost + ":" + zooPort + "...");
+		zkNaming = new ZKNaming(zooHost, String.valueOf(zooPort));
+		System.out.println("Binding " + path + " to " + host + ":" + port + "...");
+		zkNaming.rebind(path, host, String.valueOf(port));
 	}
 
 	// Unbind class unbinds replica from ZKNaming after interruption.
@@ -174,7 +186,7 @@ public class HubMain {
 		public void run() {
 			if (zkNaming != null) {
 				try {
-					System.out.println("Unbinding " + path + " from ZooKeeper...");
+					System.out.println("\nUnbinding " + path + " from ZooKeeper...");
 					zkNaming.unbind(path, host, String.valueOf(port));
 				}
 				catch (ZKNamingException e) {

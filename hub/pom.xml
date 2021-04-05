@@ -25,6 +25,7 @@
 		<hub.port>808${hub.i}</hub.port>
 		<file.users>users.csv</file.users>
 		<file.stations>stations.csv</file.stations>
+		<rec.init>initRec</rec.init>
 	</properties>
 
 	<!-- Dependencies are code archives - JARs - on which your current module needs in order to compile, build, test, and/or to run. 
@@ -102,6 +103,7 @@
 						<argument>${hub.i}</argument>
 						<argument>${file.users}</argument>
 						<argument>${file.stations}</argument>
+						<argument>${rec.init}</argument>
 					</arguments>
 				</configuration>
 			</plugin>

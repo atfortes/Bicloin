@@ -27,9 +27,7 @@ public class RecordTester {
 		final int zooPort = Integer.parseInt(args[1]);
 		final String path = args[2];
 
-		RecFrontend frontend = null;
-		try {
-			frontend = new RecFrontend(zooHost, zooPort, path);
+		try(RecFrontend frontend = new RecFrontend(zooHost, zooPort, path)) {
 
 			Rec.CtrlPingRequest request = Rec.CtrlPingRequest.newBuilder().setInput("friend").build();
 			Rec.CtrlPingResponse response = frontend.ctrlPing(request);
@@ -39,10 +37,6 @@ public class RecordTester {
 			System.err.println("Caught exception when searching for Rec: " + e);
 		} catch (StatusRuntimeException e) {
 			System.err.println("Caught exception with description: " + e.getStatus().getDescription());
-		}
-
-		if (frontend != null) {
-			frontend.close();
 		}
 	}
 	
