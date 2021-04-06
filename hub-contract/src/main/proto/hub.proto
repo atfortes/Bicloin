@@ -106,6 +106,26 @@ message SysStatusResponse {
   repeated Reply sequence = 1;
 }
 
+// reset service
+
+message ResetRequest {
+  string password = 1;
+}
+
+message ResetResponse {
+
+}
+
+// distance service
+
+message DistanceRequest {
+  float lat = 1;
+  float lon = 2;
+}
+
+message DistanceResponse {
+  int64 distance = 1;
+}
 
 service HubService {
   rpc ctrl_ping(CtrlPingRequest) returns (CtrlPingResponse);
@@ -116,4 +136,6 @@ service HubService {
   rpc bike_up(BikeRequest) returns (BikeResponse);
   rpc bike_down(BikeRequest) returns (BikeResponse);
   rpc sys_status(SysStatusRequest) returns (SysStatusResponse);
+  rpc reset(ResetRequest) returns (ResetResponse);
+  rpc distance(DistanceRequest) returns (DistanceResponse);
 }
