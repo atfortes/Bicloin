@@ -61,7 +61,6 @@ public class RecordMainImpl extends RecordServiceGrpc.RecordServiceImplBase {
     }
 
     public boolean isNameValid(String name){
-        if (name==null){ return false;}
-        return true;
+        return !(name=="");
     }
 }
