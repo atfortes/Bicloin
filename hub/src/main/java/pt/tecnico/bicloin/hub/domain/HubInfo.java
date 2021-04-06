@@ -31,7 +31,7 @@ public class HubInfo {
 
         ArrayList<Station> gather = new ArrayList<>(stations.values());
         gather.sort((Station s1, Station s2) ->
-                Double.compare(s1.haversine_distance(lat, lon), s1.haversine_distance(lat, lon)));
+                Double.compare(s1.haversine_distance(lat, lon), s2.haversine_distance(lat, lon)));
                 // compare to is cleaner but wasn't working
                 //s1.haversine_distance(lat, lon).compareTo(s2.haversine_distance(lat, lon)));
 
