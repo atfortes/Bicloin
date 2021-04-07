@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import com.google.protobuf.Any;
+import com.google.protobuf.BoolValue;
 import com.google.protobuf.Int32Value;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.StatusRuntimeException;
@@ -62,7 +63,7 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         } catch (StatusRuntimeException e) {
             System.err.println("Caught exception with description: " + e.getStatus().getDescription());
         } catch (InvalidProtocolBufferException e) {
-            System.err.println("Caught when unpacking data from Rec: " + e);
+            System.err.println("Caught when transferring data between hub and rec: " + e);
         }
     }
 
@@ -108,30 +109,131 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         } catch (StatusRuntimeException e) {
             System.err.println("Caught exception with description: " + e.getStatus().getDescription());
         } catch (InvalidProtocolBufferException e) {
-            System.err.println("Caught when unpacking data from Rec: " + e);
+            System.err.println("Caught when transferring data between hub and rec: " + e);
         }
     }
 
     @Override
     public void bikeUp(BikeRequest request, StreamObserver<BikeResponse> responseObserver) {
-        // TODO
-        BikeResponse response = BikeResponse.newBuilder().build();
 
-        // Send a single response through the stream.
-        responseObserver.onNext(response);
-        // Notify the client that the operation has been completed.
-        responseObserver.onCompleted();
+        String username = request.getUsername();
+        User user = hub.getUser(username);
+        if (user == null) {
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
+            return;
+        }
+        String stationId = request.getStationId();
+        Station station = hub.getStation(stationId);
+        if (station == null) {
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
+            return;
+        }
+        float latitude = request.getLatitude();
+        float longitude = request.getLongitude();
+        if (station.haversine_distance(latitude, longitude) >= 200) {
+            BikeResponse response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.OUT_OF_RANGE).build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+            return;
+        }
+
+        try {
+
+            boolean userHasBike = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/bike").build()).getValue().unpack(BoolValue.class).getValue();
+            int bikesInStation = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + stationId + "/bikes").build()).getValue().unpack(Int32Value.class).getValue();
+            int userBalance = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/balance").build()).getValue().unpack(Int32Value.class).getValue();
+            BikeResponse response;
+
+            if (userHasBike) {
+                response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.ALREADY_HAS_BIKE).build();
+            }
+            else if (bikesInStation == 0) {
+                response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.NO_BIKES_IN_STATION).build();
+            }
+            else if (userBalance < 10) {
+                response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.OUT_OF_MONEY).build();
+            }
+            else {
+                int bikeRequests = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + stationId + "/requests").build()).getValue().unpack(Int32Value.class).getValue();
+                // register new values in rec after everything is verified
+                frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + stationId + "/balance").setValue(Any.pack(Int32Value.newBuilder().setValue(userBalance-10).build())).build());
+                frontend.write(Rec.WriteRequest.newBuilder().setName("stations/" + stationId + "/bikes").setValue(Any.pack(Int32Value.newBuilder().setValue(--bikesInStation).build())).build());
+                frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + stationId + "/balance").setValue(Any.pack(BoolValue.newBuilder().setValue(true).build())).build());
+                frontend.write(Rec.WriteRequest.newBuilder().setName("stations/" + stationId + "/requests").setValue(Any.pack(Int32Value.newBuilder().setValue(++bikeRequests).build())).build());
+                response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.OK).build();
+            }
+
+            // Send a single response through the stream.
+            responseObserver.onNext(response);
+            // Notify the client that the operation has been completed.
+            responseObserver.onCompleted();
+
+        } catch (StatusRuntimeException e) {
+            System.err.println("Caught exception with description: " + e.getStatus().getDescription());
+        } catch (InvalidProtocolBufferException e) {
+            System.err.println("Caught when transferring data between hub and rec: " + e);
+        }
     }
 
     @Override
     public void bikeDown(BikeRequest request, StreamObserver<BikeResponse> responseObserver) {
-        // TODO
-        BikeResponse response = BikeResponse.newBuilder().build();
 
-        // Send a single response through the stream.
-        responseObserver.onNext(response);
-        // Notify the client that the operation has been completed.
-        responseObserver.onCompleted();
+        String username = request.getUsername();
+        User user = hub.getUser(username);
+        if (user == null) {
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
+            return;
+        }
+        String stationId = request.getStationId();
+        Station station = hub.getStation(stationId);
+        if (station == null) {
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
+            return;
+        }
+        float latitude = request.getLatitude();
+        float longitude = request.getLongitude();
+        if (station.haversine_distance(latitude, longitude) >= 200) {
+            BikeResponse response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.OUT_OF_RANGE).build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+            return;
+        }
+
+        try {
+
+            int stationCapacity = station.getCapacity();
+            boolean userHasBike = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/bike").build()).getValue().unpack(BoolValue.class).getValue();
+            int bikesInStation = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + stationId + "/bikes").build()).getValue().unpack(Int32Value.class).getValue();
+
+            BikeResponse response;
+
+            if (!userHasBike) {
+                response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.NO_BIKE_REQUESTED).build();
+            }
+            else if (stationCapacity-bikesInStation == 0) {
+                response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.STATION_IS_FULL).build();
+            }
+            else {
+                int userBalance = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/balance").build()).getValue().unpack(Int32Value.class).getValue();
+                int bikeReturns = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + stationId + "/requests").build()).getValue().unpack(Int32Value.class).getValue();
+                // register new values in rec after everything is verified
+                frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + stationId + "/balance").setValue(Any.pack(BoolValue.newBuilder().setValue(false).build())).build());
+                frontend.write(Rec.WriteRequest.newBuilder().setName("stations/" + stationId + "/bikes").setValue(Any.pack(Int32Value.newBuilder().setValue(++bikesInStation).build())).build());
+                frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + stationId + "/balance").setValue(Any.pack(Int32Value.newBuilder().setValue(userBalance+station.getAward()).build())).build());
+                frontend.write(Rec.WriteRequest.newBuilder().setName("stations/" + stationId + "/requests").setValue(Any.pack(Int32Value.newBuilder().setValue(++bikeReturns).build())).build());
+                response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.OK).build();
+            }
+
+            // Send a single response through the stream.
+            responseObserver.onNext(response);
+            // Notify the client that the operation has been completed.
+            responseObserver.onCompleted();
+
+        } catch (StatusRuntimeException e) {
+            System.err.println("Caught exception with description: " + e.getStatus().getDescription());
+        } catch (InvalidProtocolBufferException e) {
+            System.err.println("Caught when transferring data between hub and rec: " + e);
+        }
     }
 
     @Override

@@ -80,10 +80,11 @@ message BikeResponse {
   enum Response {
     OK = 0;
     OUT_OF_RANGE = 1;
-    ALREADY_HAS_BIKE = 2;
-    NO_BIKES_IN_STATION = 3;
-    NO_BIKE_REQUESTED = 4;
-    STATION_IS_FULL = 5;
+    OUT_OF_MONEY = 2;
+    ALREADY_HAS_BIKE = 3;
+    NO_BIKES_IN_STATION = 4;
+    NO_BIKE_REQUESTED = 5;
+    STATION_IS_FULL = 6;
 
   }
   Response response = 1;
