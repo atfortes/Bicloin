@@ -130,6 +130,8 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         }
         float latitude = request.getLatitude();
         float longitude = request.getLongitude();
+
+        System.out.println(station.haversine_distance(latitude, longitude));
         if (station.haversine_distance(latitude, longitude) >= 200) {
             BikeResponse response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.OUT_OF_RANGE).build();
             responseObserver.onNext(response);

@@ -2,6 +2,7 @@ package pt.tecnico.bicloin.app;
 
 import pt.tecnico.bicloin.app.exceptions.BikePickupAndDropOffException;
 import pt.tecnico.bicloin.hub.grpc.*;
+import pt.tecnico.bicloin.hub.HubFrontend;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,24 +13,27 @@ public class App {
     private float lon;
     private final String id;
     private final String phone;
-    private final HubServiceGrpc.HubServiceBlockingStub stub;
     private HashMap<String, ArrayList<Float>> tags;
+    private final HubFrontend frontend;
 
 
-    public App(float lat, float lon, String id, String phone, HubServiceGrpc.HubServiceBlockingStub stub) {
+
+    public App(float lat, float lon, String id, String phone, HubFrontend frontend) {
         this.lat = lat;
         this.lon = lon;
         this.id = id;
         this.phone = phone;
-        this.stub = stub;
+        this.frontend = frontend;
         this.tags = new HashMap<>();
     }
 
     public String balance() {
 
+
+
         BalanceRequest.Builder builder = BalanceRequest.newBuilder();
         builder.setUsername(id);
-        BalanceResponse resp = stub.balance(builder.build());
+        BalanceResponse resp = frontend.balance(builder.build());
 
         return String.format("%s %d BIC", id, resp.getBalance());
     }
@@ -41,7 +45,7 @@ public class App {
         builder.setUsername(id);
         builder.setAmount(amount);
         builder.setPhoneNumber(phone);
-        TopUpResponse resp = stub.topUp(builder.build());
+        TopUpResponse resp = frontend.topUp(builder.build());
 
         return String.format("%s %d BIC", id, resp.getBalance());
     }
@@ -63,6 +67,12 @@ public class App {
         return at();
     }
 
+    public String move(float lat, float lon) {
+        this.lat = lat;
+        this.lon = lon;
+        return at();
+    }
+
     public String at() {
         return String.format("%s em https://www.google.com/maps/place/%f,%f", id, lat, lon);
     }
@@ -73,17 +83,18 @@ public class App {
         builder.setLatitude(lat);
         builder.setLongitude(lon);
         builder.setK(n);
-        LocateStationResponse resp = stub.locateStation(builder.build());
+        LocateStationResponse resp = frontend.locateStation(builder.build());
 
         StringBuilder res = new StringBuilder();
 
         for (int i = 0; i < n; i++) {
             String sid = resp.getIds(i);
+            InfoStationResponse station = frontend.infoStation(InfoStationRequest.newBuilder().setStationId(sid).build());
+            DistanceResponse distance = frontend.distance(DistanceRequest.newBuilder().setLat(lat).setLon(lon).build());
 
-            // FIXME infostation request n tem distancia para o user, implementar um novo metodo remoto?
-            InfoStationResponse station = stub.infoStation(InfoStationRequest.newBuilder().setStationId(sid).build());
-            res.append(String.format("%s, lat %f, long %f, %d docas, %f BIC prémio, %d bicicletas, a %d metros\n",
-                    sid, station.getLatitude(), station.getLongitude(), station.getCapacity(), station.getAward(), station.getBikes(), 0));
+            res.append(String.format("%s, lat %f, long %f, %d docas, %f BIC prémio, %d bicicletas, a %d " +
+                            "metros\n",
+                    sid, station.getLatitude(), station.getLongitude(), station.getCapacity(), station.getAward(), station.getBikes(), distance.getDistance()));
 
         }
         return res.toString();
@@ -93,7 +104,7 @@ public class App {
 
         InfoStationRequest.Builder builder = InfoStationRequest.newBuilder();
         builder.setStationId(name);
-        InfoStationResponse resp = stub.infoStation(builder.build());
+        InfoStationResponse resp = frontend.infoStation(builder.build());
         String url = String.format("https://www.google.com/maps/place/%f,%f", resp.getLatitude(), resp.getLongitude());
 
         return String.format("%s, lat %f, long %f, %d docas, %f BIC prémio, %d bicicletas, %d levantamentos, %d devoluções, %s",
@@ -109,7 +120,7 @@ public class App {
         builder.setLatitude(lat);
         builder.setLongitude(lon);
         builder.setStationId(name);
-        BikeResponse.Response resp = stub.bikeUp(builder.build()).getResponse();
+        BikeResponse.Response resp = frontend.bikeUp(builder.build()).getResponse();
 
         switch (resp) {
             case OK:
@@ -119,6 +130,8 @@ public class App {
                 throw new BikePickupAndDropOffException("ERRO já tem bicicleta");
             case NO_BIKES_IN_STATION:
                 throw new BikePickupAndDropOffException("ERRO estação sem bicicletas");
+            case OUT_OF_MONEY:
+                throw new BikePickupAndDropOffException("ERRO sem dinheiro");
         }
 
         return "OK";
@@ -132,7 +145,7 @@ public class App {
         builder.setLatitude(lat);
         builder.setLongitude(lon);
         builder.setStationId(name);
-        BikeResponse.Response resp = stub.bikeUp(builder.build()).getResponse();
+        BikeResponse.Response resp = frontend.bikeDown(builder.build()).getResponse();
 
         switch (resp) {
             case OK:
@@ -151,7 +164,7 @@ public class App {
 
         CtrlPingRequest.Builder builder = CtrlPingRequest.newBuilder();
         builder.setInput("hello");
-        CtrlPingResponse resp = stub.ctrlPing(builder.build());
+        CtrlPingResponse resp = frontend.ctrlPing(builder.build());
         return "received: " + resp.getOutput();
     }
 

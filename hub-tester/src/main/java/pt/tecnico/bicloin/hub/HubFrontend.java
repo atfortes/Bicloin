@@ -12,6 +12,9 @@ public class HubFrontend implements AutoCloseable {
     HubServiceGrpc.HubServiceBlockingStub stub;
 
     public HubFrontend(String zooHost, int zooPort, String path) throws ZKNamingException {
+        // FIXME path unknown at this point
+        // implement find hub here?
+
         ZKNaming zkNaming = new ZKNaming(zooHost, String.valueOf(zooPort));
         ZKRecord hub = zkNaming.lookup(path);
         String target = hub.getURI();
@@ -38,6 +41,8 @@ public class HubFrontend implements AutoCloseable {
     }
 
     public TopUpResponse topUp(TopUpRequest request) {return stub.topUp(request);}
+
+    public DistanceResponse distance(DistanceRequest request) {return stub.distance(request);}
 
 
     @Override

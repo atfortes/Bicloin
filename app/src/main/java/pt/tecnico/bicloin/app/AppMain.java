@@ -1,11 +1,9 @@
 package pt.tecnico.bicloin.app;
 
 import java.util.Scanner;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-import io.grpc.StatusRuntimeException;
+import io.grpc.*;
 import pt.tecnico.bicloin.app.exceptions.BikePickupAndDropOffException;
-import pt.tecnico.bicloin.hub.grpc.HubServiceGrpc;
+import pt.tecnico.bicloin.hub.HubFrontend;
 import pt.ulisboa.tecnico.sdis.zk.*;
 
 public class AppMain {
@@ -28,34 +26,36 @@ public class AppMain {
 
 		final String zooKeeperServ = args[0];
 		final String zooKeeperPort = args[1];
-		final ZKNaming zkNaming = new ZKNaming(zooKeeperServ, zooKeeperPort);
 		final String uid = args[2];
 		final String phone = args[3];
 		final float lat = Float.parseFloat(args[4]);
 		final float lon = Float.parseFloat(args[5]);
-		String target = "";
+		// FIXME see hubFrontend fixme
+		String target = "/grpc/bicloin/hub/1";
 
-		try {
-			// FIXME get correct hub from zk
-			target = zkNaming.lookup("/grpc/bicloin/hub/1").getURI();
+
+		try (HubFrontend frontend = new HubFrontend(zooKeeperServ, Integer.parseInt(zooKeeperPort), target)) {
+
+			App app = new App(lat, lon, uid, phone, frontend);
+			Scanner in = new Scanner(System.in);
+			do {
+				System.out.print("> ");
+				command(in.nextLine(), app);
+			} while (in.hasNextLine());
+
+			in.close();
+
 		} catch (ZKNamingException e) {
 			System.err.println(e.getMessage());
+			System.err.println("Exception reaching hub, shutting down");
 		}
 
-		final ManagedChannel channel = ManagedChannelBuilder.forTarget(target).
-				usePlaintext().build();
-		HubServiceGrpc.HubServiceBlockingStub stub = HubServiceGrpc.newBlockingStub(channel);
-		App app = new App(lat, lon, uid, phone, stub);
+	}
 
-		Scanner in = new Scanner(System.in);
-
-		do {
-			System.out.print("> ");
-			command(in.nextLine(), app);
-		} while (in.hasNextLine());
-
-		in.close();
-		channel.shutdownNow();
+	public static String getHubURI(String zooKeeperServ, String zooKeeperPort) throws ZKNamingException {
+		// TODO parse records and get functional hub
+		ZKNaming zkNaming = new ZKNaming(zooKeeperServ, zooKeeperPort);
+		return zkNaming.lookup("/grpc/bicloin/hub/1").getURI();
 	}
 
 
@@ -71,6 +71,8 @@ public class AppMain {
 				System.out.println(app.tag(Float.parseFloat(content[1]), Float.parseFloat(content[2]), content[3]));
 			} else if (content.length == 2 && content[0].equals("move")) {
 				System.out.println(app.move(content[1]));
+			} else if (content.length == 3 && content[0].equals("move")) {
+				System.out.println(app.move(Float.parseFloat(content[1]), Float.parseFloat(content[2])));
 			} else if (content.length == 1 && content[0].equals("at")) {
 				System.out.println(app.at());
 			} else if (content.length == 2 && content[0].equals("scan")) {
@@ -93,7 +95,7 @@ public class AppMain {
 			} else if (content.length == 0 || content[0].equals("#")) {
 				// skip comments and empty lines
 				assert true;
-			} else System.out.println("incorrect usage, try >help");
+			} else System.out.println("incorrect usage, try the command help");
 
 
 		} catch (NumberFormatException e) {
