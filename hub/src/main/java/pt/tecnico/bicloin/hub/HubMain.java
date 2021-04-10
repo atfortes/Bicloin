@@ -91,7 +91,7 @@ public class HubMain {
 		} catch(InterruptedException e){
 			System.err.println("Server was interrupted.");
 		} catch (IOException ie) {
-			System.err.println(ie.toString());
+			System.err.println(String.valueOf(ie));
 		}
 	}
 
