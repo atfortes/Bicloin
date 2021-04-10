@@ -2,7 +2,6 @@ package pt.tecnico.bicloin.app;
 
 import java.util.Scanner;
 import io.grpc.*;
-import pt.tecnico.bicloin.app.exceptions.BikePickupAndDropOffException;
 import pt.tecnico.bicloin.hub.HubFrontend;
 import pt.ulisboa.tecnico.sdis.zk.*;
 
@@ -30,11 +29,8 @@ public class AppMain {
 		final String phone = args[3];
 		final float lat = Float.parseFloat(args[4]);
 		final float lon = Float.parseFloat(args[5]);
-		// FIXME see hubFrontend fixme
-		String target = "/grpc/bicloin/hub/1";
 
-
-		try (HubFrontend frontend = new HubFrontend(zooKeeperServ, Integer.parseInt(zooKeeperPort), target)) {
+		try (HubFrontend frontend = new HubFrontend(zooKeeperServ, Integer.parseInt(zooKeeperPort), "/grpc/bicloin/hub")) {
 
 			App app = new App(lat, lon, uid, phone, frontend);
 			Scanner in = new Scanner(System.in);
@@ -51,13 +47,6 @@ public class AppMain {
 		}
 
 	}
-
-	public static String getHubURI(String zooKeeperServ, String zooKeeperPort) throws ZKNamingException {
-		// TODO parse records and get functional hub
-		ZKNaming zkNaming = new ZKNaming(zooKeeperServ, zooKeeperPort);
-		return zkNaming.lookup("/grpc/bicloin/hub/1").getURI();
-	}
-
 
 	private static void command(String s, App app) {
 		String[] content = s.split(" ");
@@ -102,7 +91,7 @@ public class AppMain {
 			System.out.println("incorrect usage, try >help");
 		} catch (StatusRuntimeException e) {
 			System.out.println(e.getStatus().getDescription());
-		} catch (BikePickupAndDropOffException e) {
+		} catch (BicloinAppException e) {
 			System.out.println(e.getMessage());
 		} catch (Exception e) {
 			System.out.println("unexpected exception");

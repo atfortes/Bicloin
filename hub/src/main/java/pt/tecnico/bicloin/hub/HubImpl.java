@@ -1,9 +1,7 @@
 package pt.tecnico.bicloin.hub;
 
-
 import java.util.List;
 import java.util.logging.Logger;
-
 import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
 import com.google.protobuf.Int32Value;
@@ -11,12 +9,10 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import io.grpc.Status;
-import org.apache.commons.lang.enums.EnumUtils;
 import pt.tecnico.bicloin.hub.grpc.*;
 import pt.tecnico.bicloin.hub.domain.*;
 import pt.tecnico.rec.RecFrontend;
 import pt.tecnico.rec.grpc.Rec;
-import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
@@ -215,12 +211,12 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
             }
             else {
                 int userBalance = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/balance").build()).getValue().unpack(Int32Value.class).getValue();
-                int bikeReturns = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + stationId + "/requests").build()).getValue().unpack(Int32Value.class).getValue();
+                int bikeReturns = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + stationId + "/returns").build()).getValue().unpack(Int32Value.class).getValue();
                 // register new values in rec after everything is verified
                 frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + username + "/bike").setValue(Any.pack(BoolValue.newBuilder().setValue(false).build())).build());
                 frontend.write(Rec.WriteRequest.newBuilder().setName("stations/" + stationId + "/bikes").setValue(Any.pack(Int32Value.newBuilder().setValue(++bikesInStation).build())).build());
                 frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + username + "/balance").setValue(Any.pack(Int32Value.newBuilder().setValue(userBalance+station.getAward()).build())).build());
-                frontend.write(Rec.WriteRequest.newBuilder().setName("stations/" + stationId + "/requests").setValue(Any.pack(Int32Value.newBuilder().setValue(++bikeReturns).build())).build());
+                frontend.write(Rec.WriteRequest.newBuilder().setName("stations/" + stationId + "/returns").setValue(Any.pack(Int32Value.newBuilder().setValue(++bikeReturns).build())).build());
                 response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.OK).build();
             }
 
@@ -244,22 +240,38 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
         if (station == null) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
+            return;
         }
 
-        else {
-            InfoStationResponse.Builder builder = InfoStationResponse.newBuilder();
-            builder.setName(id);
-            builder.setLatitude(station.getLatitude());
-            builder.setLongitude(station.getLongitude());
-            builder.setCapacity(station.getCapacity());
-            builder.setAward(station.getAward());
-            //  TODO set bikes, pickups, deliveries from reg
+        InfoStationResponse.Builder builder = InfoStationResponse.newBuilder();
+        builder.setName(id);
+        builder.setLatitude(station.getLatitude());
+        builder.setLongitude(station.getLongitude());
+        builder.setCapacity(station.getCapacity());
+        builder.setAward(station.getAward());
+        int bikes = 0;
+        int requests = 0 ;
+        int returns = 0;
 
-            // Send a single response through the stream.
-            responseObserver.onNext(builder.build());
-            // Notify the client that the operation has been completed.
-            responseObserver.onCompleted();
+        try {
+            bikes = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + id + "/bikes").build()).getValue().unpack(Int32Value.class).getValue();
+            requests = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + id + "/requests").build()).getValue().unpack(Int32Value.class).getValue();
+            returns = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + id + "/returns").build()).getValue().unpack(Int32Value.class).getValue();
+
+        } catch (InvalidProtocolBufferException e) {
+            System.err.println("Caught when transferring data between hub and rec: " + e);
+            // FIXME throw responseObserver.onError()
         }
+
+
+        builder.setBikes(bikes);
+        builder.setPickups(requests);
+        builder.setDeliveries(returns);
+
+        // Send a single response through the stream.
+        responseObserver.onNext(builder.build());
+        // Notify the client that the operation has been completed.
+        responseObserver.onCompleted();
     }
 
     @Override
@@ -269,13 +281,34 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         float lat = request.getLatitude();
         float lon = request.getLongitude();
 
-        // untested
         LocateStationResponse response = LocateStationResponse.newBuilder().addAllIds(hub.sort_stations(k, lat, lon)).build();
 
         // Send a single response through the stream.
         responseObserver.onNext(response);
         // Notify the client that the operation has been completed.
         responseObserver.onCompleted();
+    }
+
+    @Override
+    public void distance(DistanceRequest request, StreamObserver<DistanceResponse> responseObserver) {
+
+        float lat = request.getLat();
+        float lon = request.getLon();
+        Station station = hub.getStation(request.getStationId());
+
+        if (station == null) {
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
+        }
+
+        else {
+            Double d = station.haversine_distance(lat, lon);
+            DistanceResponse response = DistanceResponse.newBuilder().setDistance(d.intValue()).build();
+
+            // Send a single response through the stream.
+            responseObserver.onNext(response);
+            // Notify the client that the operation has been completed.
+            responseObserver.onCompleted();
+        }
     }
 
     @Override

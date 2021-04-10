@@ -1,9 +1,7 @@
 package pt.tecnico.bicloin.app;
 
-import pt.tecnico.bicloin.app.exceptions.BikePickupAndDropOffException;
 import pt.tecnico.bicloin.hub.grpc.*;
 import pt.tecnico.bicloin.hub.HubFrontend;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -13,9 +11,8 @@ public class App {
     private float lon;
     private final String id;
     private final String phone;
-    private HashMap<String, ArrayList<Float>> tags;
+    private final HashMap<String, ArrayList<Float>> tags;
     private final HubFrontend frontend;
-
 
 
     public App(float lat, float lon, String id, String phone, HubFrontend frontend) {
@@ -59,11 +56,15 @@ public class App {
         return "OK";
     }
 
-    public String move(String name) {
+    public String move(String name) throws BicloinAppException {
         ArrayList<Float> place = tags.get(name);
+
+        if (place == null) {
+            throw new BicloinAppException("ERRO tag não definida");
+        }
+
         lat = place.get(0);
         lon = place.get(1);
-
         return at();
     }
 
@@ -90,7 +91,7 @@ public class App {
         for (int i = 0; i < n; i++) {
             String sid = resp.getIds(i);
             InfoStationResponse station = frontend.infoStation(InfoStationRequest.newBuilder().setStationId(sid).build());
-            DistanceResponse distance = frontend.distance(DistanceRequest.newBuilder().setLat(lat).setLon(lon).build());
+            DistanceResponse distance = frontend.distance(DistanceRequest.newBuilder().setStationId(sid).setLat(lat).setLon(lon).build());
 
             res.append(String.format("%s, lat %f, long %f, %d docas, %f BIC prémio, %d bicicletas, a %d " +
                             "metros\n",
@@ -113,7 +114,7 @@ public class App {
     }
 
 
-    public String bikeUp(String name) throws BikePickupAndDropOffException {
+    public String bikeUp(String name) throws BicloinAppException {
 
         BikeRequest.Builder builder = BikeRequest.newBuilder();
         builder.setUsername(id);
@@ -126,20 +127,20 @@ public class App {
             case OK:
                 break;
             case OUT_OF_RANGE:
-                throw new BikePickupAndDropOffException("ERRO fora de alcance");
+                throw new BicloinAppException("ERRO fora de alcance");
             case ALREADY_HAS_BIKE:
-                throw new BikePickupAndDropOffException("ERRO já tem bicicleta");
+                throw new BicloinAppException("ERRO já tem bicicleta");
             case NO_BIKES_IN_STATION:
-                throw new BikePickupAndDropOffException("ERRO estação sem bicicletas");
+                throw new BicloinAppException("ERRO estação sem bicicletas");
             case OUT_OF_MONEY:
-                throw new BikePickupAndDropOffException("ERRO sem dinheiro");
+                throw new BicloinAppException("ERRO sem dinheiro");
         }
 
         return "OK";
     }
 
 
-    public String bikeDown(String name) throws BikePickupAndDropOffException {
+    public String bikeDown(String name) throws BicloinAppException {
 
         BikeRequest.Builder builder = BikeRequest.newBuilder();
         builder.setUsername(id);
@@ -152,11 +153,11 @@ public class App {
             case OK:
                 break;
             case OUT_OF_RANGE:
-                throw new BikePickupAndDropOffException("ERRO fora de alcance");
+                throw new BicloinAppException("ERRO fora de alcance");
             case NO_BIKE_REQUESTED:
-                throw new BikePickupAndDropOffException("ERRO não tem bicicleta");
+                throw new BicloinAppException("ERRO não tem bicicleta");
             case STATION_IS_FULL:
-                throw new BikePickupAndDropOffException("ERRO estação sem capacidade");
+                throw new BicloinAppException("ERRO estação sem capacidade");
         }
 
         return "OK";

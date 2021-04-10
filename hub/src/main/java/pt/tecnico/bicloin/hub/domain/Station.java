@@ -45,14 +45,18 @@ public class Station {
 
     public double haversine_distance(float lat, float lon) {
         // earth radius
-        final double r = 63354390;
-        double avg_lat = (lat - latitude) / 2;
-        double avg_lon = (lon - longitude) / 2;
+        final double r = 6371000;
+        double avg_lat = Math.toRadians(lat - latitude) / 2;
+        double avg_lon = Math.toRadians(lon - longitude) / 2;
 
-        double res = Math.sqrt(Math.pow(Math.sin(avg_lat), 2) +
-                Math.cos(latitude)*Math.cos(lat)*Math.pow(Math.sin(avg_lon), 2));
+        double lat1 = Math.toRadians(lat);
+        double lat2 = Math.toRadians(latitude);
 
-        return 2*r*Math.asin(res);
+        double res = Math.pow(Math.sin(avg_lat), 2) +
+                     Math.pow(Math.sin(avg_lon), 2) *
+                             Math.cos(lat1) *
+                             Math.cos(lat2);
+
+        return 2*Math.asin(Math.sqrt(res))*r;
     }
-
 }

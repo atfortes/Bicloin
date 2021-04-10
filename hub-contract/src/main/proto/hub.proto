@@ -122,10 +122,11 @@ message ResetResponse {
 message DistanceRequest {
   float lat = 1;
   float lon = 2;
+  string station_id = 3;
 }
 
 message DistanceResponse {
-  int64 distance = 1;
+  int32 distance = 1;
 }
 
 service HubService {
