@@ -21,7 +21,8 @@
 
 		<zook.serv>localhost</zook.serv>
 		<zook.port>2181</zook.port>
-		<path>/grpc/bicloin/rec/1</path>
+		<rec.path>/grpc/bicloin/rec/</rec.path>
+		<rec.i>1</rec.i><!-- instance number -->
 	</properties>
 
 	<!-- Dependencies are code archives - JARs - on which your current module needs in order to compile, build, test, and/or to run. 
@@ -106,7 +107,7 @@
 					<arguments>
 						<argument>${zook.serv}</argument>
 						<argument>${zook.port}</argument>
-						<argument>${path}</argument>
+						<argument>${rec.path}${rec.i}</argument>
 					</arguments>
 				</configuration>
 			</plugin>

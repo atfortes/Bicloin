@@ -86,7 +86,7 @@ public class RecordMain {
 		public void run() {
 			if (zkNaming != null) {
 				try {
-					System.out.println("Unbinding " + path + " from ZooKeeper...");
+					System.out.println("\nUnbinding " + path + " from ZooKeeper...");
 					zkNaming.unbind(path, host, String.valueOf(port));
 				}
 				catch (ZKNamingException e) {
