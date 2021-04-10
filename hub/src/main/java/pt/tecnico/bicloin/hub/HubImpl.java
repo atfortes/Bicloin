@@ -130,8 +130,6 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         }
         float latitude = request.getLatitude();
         float longitude = request.getLongitude();
-
-        System.out.println(station.haversine_distance(latitude, longitude));
         if (station.haversine_distance(latitude, longitude) >= 200) {
             BikeResponse response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.OUT_OF_RANGE).build();
             responseObserver.onNext(response);
@@ -158,9 +156,9 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
             else {
                 int bikeRequests = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + stationId + "/requests").build()).getValue().unpack(Int32Value.class).getValue();
                 // register new values in rec after everything is verified
-                frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + stationId + "/balance").setValue(Any.pack(Int32Value.newBuilder().setValue(userBalance-10).build())).build());
+                frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + username + "/balance").setValue(Any.pack(Int32Value.newBuilder().setValue(userBalance-10).build())).build());
                 frontend.write(Rec.WriteRequest.newBuilder().setName("stations/" + stationId + "/bikes").setValue(Any.pack(Int32Value.newBuilder().setValue(--bikesInStation).build())).build());
-                frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + stationId + "/balance").setValue(Any.pack(BoolValue.newBuilder().setValue(true).build())).build());
+                frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + username + "/bike").setValue(Any.pack(BoolValue.newBuilder().setValue(true).build())).build());
                 frontend.write(Rec.WriteRequest.newBuilder().setName("stations/" + stationId + "/requests").setValue(Any.pack(Int32Value.newBuilder().setValue(++bikeRequests).build())).build());
                 response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.OK).build();
             }
@@ -219,9 +217,9 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
                 int userBalance = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/balance").build()).getValue().unpack(Int32Value.class).getValue();
                 int bikeReturns = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + stationId + "/requests").build()).getValue().unpack(Int32Value.class).getValue();
                 // register new values in rec after everything is verified
-                frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + stationId + "/balance").setValue(Any.pack(BoolValue.newBuilder().setValue(false).build())).build());
+                frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + username + "/bike").setValue(Any.pack(BoolValue.newBuilder().setValue(false).build())).build());
                 frontend.write(Rec.WriteRequest.newBuilder().setName("stations/" + stationId + "/bikes").setValue(Any.pack(Int32Value.newBuilder().setValue(++bikesInStation).build())).build());
-                frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + stationId + "/balance").setValue(Any.pack(Int32Value.newBuilder().setValue(userBalance+station.getAward()).build())).build());
+                frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + username + "/balance").setValue(Any.pack(Int32Value.newBuilder().setValue(userBalance+station.getAward()).build())).build());
                 frontend.write(Rec.WriteRequest.newBuilder().setName("stations/" + stationId + "/requests").setValue(Any.pack(Int32Value.newBuilder().setValue(++bikeReturns).build())).build());
                 response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.OK).build();
             }

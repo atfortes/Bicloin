@@ -124,6 +124,7 @@ public class App {
 
         switch (resp) {
             case OK:
+                break;
             case OUT_OF_RANGE:
                 throw new BikePickupAndDropOffException("ERRO fora de alcance");
             case ALREADY_HAS_BIKE:
@@ -149,6 +150,7 @@ public class App {
 
         switch (resp) {
             case OK:
+                break;
             case OUT_OF_RANGE:
                 throw new BikePickupAndDropOffException("ERRO fora de alcance");
             case NO_BIKE_REQUESTED:
