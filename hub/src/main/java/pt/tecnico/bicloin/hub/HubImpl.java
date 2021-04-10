@@ -1,6 +1,7 @@
 package pt.tecnico.bicloin.hub;
 
 
+import java.io.IOException;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -18,11 +19,15 @@ import pt.tecnico.rec.RecFrontend;
 import pt.tecnico.rec.grpc.Rec;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
+import static pt.tecnico.bicloin.hub.HubMain.importStations;
+import static pt.tecnico.bicloin.hub.HubMain.importUsers;
+
 public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
     private static final Logger LOGGER = Logger.getLogger(HubImpl.class.getName());
 
     private final int euro2bic = 10;
+    private final String RESET_PASSWORD = "super_strong_reset_password";
 
     private HubInfo hub = new HubInfo();
 
@@ -291,6 +296,30 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         // TODO
     }
 
+    @Override
+    public void reset(ResetRequest request, StreamObserver<ResetResponse> responseObserver) {
+        String password = request.getPassword();
 
+        if (!password.equals(RESET_PASSWORD)) {
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Incorrect Password").asRuntimeException());
+        }
+        else {
+
+            try {
+                importUsers(frontend, true);
+                importStations(frontend, true);
+
+                ResetResponse response = ResetResponse.newBuilder().build();
+
+                // Send a single response through the stream.
+                responseObserver.onNext(response);
+                // Notify the client that the operation has been completed.
+                responseObserver.onCompleted();
+            } catch(IOException ie) {
+                System.err.println(String.valueOf(ie));
+            }
+
+        }
+    }
 
 }

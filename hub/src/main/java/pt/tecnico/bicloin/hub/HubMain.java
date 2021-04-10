@@ -25,11 +25,9 @@ public class HubMain {
 	private static String path;
 	private static String host;
 	private static int port;
-	private static int instanceNumber;
 	private static String usersFile;
 	private static String stationsFile;
-	private static boolean initRec;
-	private static String recPath = "/grpc/bicloin/rec/1";
+	private static final String recPath = "/grpc/bicloin/rec/1";
 	private static List<User> userList = new ArrayList<>();
 	private static List<Station> stationList = new ArrayList<>();
 
@@ -55,17 +53,17 @@ public class HubMain {
 
 		host = args[2];
 		port = Integer.parseInt(args[3]);
-		instanceNumber = Integer.parseInt(args[4]);
+		int instanceNumber = Integer.parseInt(args[4]);
 		path = "/grpc/bicloin/hub/" + instanceNumber;
 
 		usersFile = args[5];
 		stationsFile = args[6];
-		initRec = args.length == 8 && args[7].equals("initRec");
+		boolean initRec = args.length == 8 && args[7].equals("initRec");
 
 		try(RecFrontend frontend = new RecFrontend(zooHost, zooPort, recPath)) {
 
-			importUsers(frontend);
-			importStations(frontend);
+			importUsers(frontend, initRec);
+			importStations(frontend, initRec);
 
 			final BindableService impl = new HubImpl(userList, stationList, frontend);
 
@@ -95,7 +93,7 @@ public class HubMain {
 		}
 	}
 
-	private static void importUsers(RecFrontend frontend) throws IOException {
+	public static void importUsers(RecFrontend frontend, boolean initRec) throws IOException {
 
 		try(BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(
 				System.getProperty("user.dir") + "/" + usersFile)))) {
@@ -124,7 +122,7 @@ public class HubMain {
 		}
 	}
 
-	private static void importStations(RecFrontend frontend) throws IOException {
+	public static void importStations(RecFrontend frontend, boolean initRec) throws IOException {
 
 		try(BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(
 				System.getProperty("user.dir") + "/" + stationsFile)))) {

@@ -10,7 +10,7 @@ import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class RecordIT extends BaseIT {
+public class RecordIT extends BaseIT {
 
 	static final String TEST_MESSAGE = "TEST";
 	static final String TEST_NAME = "name";
@@ -52,14 +52,14 @@ class RecordIT extends BaseIT {
 	// tests 
 
 	@Test
-	void testCtrlPingSuccess() {
+	public void testCtrlPingSuccess() {
 		Rec.CtrlPingRequest request = Rec.CtrlPingRequest.newBuilder().setInput(TEST_MESSAGE).build();
 		Rec.CtrlPingResponse response = frontend.ctrlPing(request);
 		assertEquals(TEST_MESSAGE,response.getOutput());
 	}
 
 	@Test
-	void testReadWriteSuccess() {
+	public void testReadWriteSuccess() {
 		Rec.WriteRequest requestW = Rec.WriteRequest.newBuilder().setName(TEST_NAME).setValue(TEST_VALUE).build();
 		frontend.write(requestW);
 		Rec.ReadRequest requestR = Rec.ReadRequest.newBuilder().setName(TEST_NAME).build();
@@ -68,13 +68,13 @@ class RecordIT extends BaseIT {
 	}
 
 	@Test
-	void testWriteFailure() {
+	public void testWriteFailure() {
 		Rec.WriteRequest request = Rec.WriteRequest.newBuilder().setName(INVALID_TEST_NAME).setValue(TEST_VALUE).build();
 		assertThrows(StatusRuntimeException.class, () -> {frontend.write(request);});
 	}
 
 	@Test
-	void testReadFailure() {
+	public void testReadFailure() {
 		Rec.ReadRequest request = Rec.ReadRequest.newBuilder().setName(INVALID_TEST_NAME).build();
 		assertThrows(StatusRuntimeException.class, () -> {frontend.read(request);});
 	}
