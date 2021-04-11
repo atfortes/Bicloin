@@ -25,9 +25,7 @@ public class HubTester {
 		final String zooHost = args[0];
 		final int zooPort = Integer.parseInt(args[1]);
 		String path = args[2];
-		HubFrontend frontend = null;
-		try {
-			frontend = new HubFrontend(zooHost, zooPort, path);
+		try (HubFrontend frontend = new HubFrontend(zooHost, zooPort, path)){
 			CtrlPingRequest request = CtrlPingRequest.newBuilder().setInput("friend").build();
 			CtrlPingResponse response = frontend.ctrlPing(request);
 			System.out.println(response.getOutput());
@@ -36,10 +34,6 @@ public class HubTester {
 			System.err.println("Caught exception when searching for Rec: " + e);
 		} catch (StatusRuntimeException e) {
 			System.err.println("Caught exception with description: " + e.getStatus().getDescription());
-		}
-
-		if (frontend != null) {
-			frontend.close();
 		}
 	}
 	

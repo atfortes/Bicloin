@@ -27,7 +27,6 @@ public class RecordMainImpl extends RecordServiceGrpc.RecordServiceImplBase {
         }
         LOGGER.info("Read: " + name);
         Any value = rec.getValue(name);
-        LOGGER.info("Value: " + value);
         var builder = Rec.ReadResponse.newBuilder();
 
         if (value == null) { responseObserver.onNext(builder.build());}
@@ -61,6 +60,6 @@ public class RecordMainImpl extends RecordServiceGrpc.RecordServiceImplBase {
     }
 
     public boolean isNameValid(String name){
-        return !(name=="");
+        return !name.isEmpty();
     }
 }

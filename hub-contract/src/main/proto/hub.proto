@@ -109,11 +109,11 @@ message SysStatusResponse {
 
 // reset service
 
-message ResetRequest {
+message CtrlResetRequest {
   string password = 1;
 }
 
-message ResetResponse {
+message CtrlResetResponse {
 
 }
 
@@ -138,6 +138,6 @@ service HubService {
   rpc bike_up(BikeRequest) returns (BikeResponse);
   rpc bike_down(BikeRequest) returns (BikeResponse);
   rpc sys_status(SysStatusRequest) returns (SysStatusResponse);
-  rpc reset(ResetRequest) returns (ResetResponse);
+  rpc ctrl_reset(CtrlResetRequest) returns (CtrlResetResponse);
   rpc distance(DistanceRequest) returns (DistanceResponse);
 }

@@ -62,6 +62,8 @@ public class HubFrontend implements AutoCloseable {
         return stub.ctrlPing(request);
     }
 
+    public CtrlResetResponse ctrlReset(CtrlResetRequest request) { return stub.ctrlReset(request); }
+
     public SysStatusResponse sysStatus(SysStatusRequest request) {
         return stub.sysStatus(request);
     }

@@ -10,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class HubIT extends BaseIT{
 
+	static final String HUB_PASSWORD = "super_strong_reset_password";
+
 	static final String TEST_USER_NAME = "alice";
 	static final String TEST_USER_FULL_NAME = "Alice Andrade";
 	static final String TEST_USER_PHONE = "+35191102030";
@@ -32,6 +34,14 @@ public class HubIT extends BaseIT{
 
 	static final String TEST_STATION_ID_2 = "ista";
 	static final String TEST_STATION_ID_3 = "gulb";
+
+	static final String TEST_STATION_NO_BIKES_ID = "cate";
+	static final float TEST_STATION_NO_BIKES_LATITUDE = (float) 38.7097;
+	static final float TEST_STATION_NO_BIKES_LONGITUDE = (float) -9.1336;
+
+	static final String TEST_STATION_FULL_ID = "gulb";
+	static final float TEST_STATION_FULL_LATITUDE = (float) 38.7376;
+	static final float TEST_STATION_FULL_LONGITUDE = (float) -9.1545;
 
 	static final String TEST_MESSAGE = "TEST";
 
@@ -69,7 +79,8 @@ public class HubIT extends BaseIT{
 	
 	@AfterEach
 	public void tearDown() {
-		// reset
+		CtrlResetRequest request = CtrlResetRequest.newBuilder().setPassword(HUB_PASSWORD).build();
+		frontend.ctrlReset(request);
 	}
 		
 	// tests 
@@ -169,6 +180,166 @@ public class HubIT extends BaseIT{
 		assertThrows(StatusRuntimeException.class, () -> {frontend.infoStation(request);});
 	}
 
+	@Test
+	public void testBikeUpSuccess() {
+		testTopUpSuccess();
+		BikeRequest bikeUpRequest = BikeRequest.newBuilder()
+				.setUsername(TEST_USER_NAME)
+				.setLatitude(TEST_STATION_LATITUDE)
+				.setLongitude(TEST_STATION_LONGITUDE)
+				.setStationId(TEST_STATION_ID)
+				.build();
+		BikeResponse response = frontend.bikeUp(bikeUpRequest);
+		assertEquals(BikeResponse.Response.OK,response.getResponse());
+	}
+
+	@Test
+	public void testBikeUpFailure1() {
+		BikeRequest request = BikeRequest.newBuilder()
+				.setUsername(TEST_USER_WRONG_NAME)
+				.setLatitude(TEST_STATION_LATITUDE)
+				.setLongitude(TEST_STATION_LONGITUDE)
+				.setStationId(TEST_STATION_ID)
+				.build();
+		assertThrows(StatusRuntimeException.class, () -> {frontend.bikeUp(request);});
+	}
+
+	@Test
+	public void testBikeUpFailure2() {
+		BikeRequest request = BikeRequest.newBuilder()
+				.setUsername(TEST_USER_NAME)
+				.setLatitude(TEST_STATION_LATITUDE)
+				.setLongitude(TEST_STATION_LONGITUDE)
+				.setStationId(TEST_STATION_WRONG_ID)
+				.build();
+		assertThrows(StatusRuntimeException.class, () -> {frontend.bikeUp(request);});
+	}
+
+	@Test
+	public void testBikeUpFailure3() {
+		testTopUpSuccess();
+		BikeRequest request = BikeRequest.newBuilder()
+				.setUsername(TEST_USER_NAME)
+				.setLatitude(TEST_LATITUDE_1)
+				.setLongitude(TEST_LONGITUDE_1)
+				.setStationId(TEST_STATION_ID)
+				.build();
+		BikeResponse response = frontend.bikeUp(request);
+		assertEquals(BikeResponse.Response.OUT_OF_RANGE,response.getResponse());
+	}
+
+	@Test
+	public void testBikeUpFailure4() {
+		BikeRequest bikeUpRequest = BikeRequest.newBuilder()
+				.setUsername(TEST_USER_NAME)
+				.setLatitude(TEST_STATION_LATITUDE)
+				.setLongitude(TEST_STATION_LONGITUDE)
+				.setStationId(TEST_STATION_ID)
+				.build();
+		BikeResponse response = frontend.bikeUp(bikeUpRequest);
+		assertEquals(BikeResponse.Response.OUT_OF_MONEY,response.getResponse());
+	}
+
+	@Test
+	public void testBikeUpFailure5() {
+		testBikeUpSuccess();
+		BikeRequest request = BikeRequest.newBuilder()
+				.setUsername(TEST_USER_NAME)
+				.setLatitude(TEST_STATION_LATITUDE)
+				.setLongitude(TEST_STATION_LONGITUDE)
+				.setStationId(TEST_STATION_ID)
+				.build();
+		BikeResponse response = frontend.bikeUp(request);
+		assertEquals(BikeResponse.Response.ALREADY_HAS_BIKE,response.getResponse());
+	}
+
+	@Test
+	public void testBikeUpFailure6() {
+		testTopUpSuccess();
+		BikeRequest request = BikeRequest.newBuilder()
+				.setUsername(TEST_USER_NAME)
+				.setLatitude(TEST_STATION_NO_BIKES_LATITUDE)
+				.setLongitude(TEST_STATION_NO_BIKES_LONGITUDE)
+				.setStationId(TEST_STATION_NO_BIKES_ID)
+				.build();
+		BikeResponse response = frontend.bikeUp(request);
+		assertEquals(BikeResponse.Response.NO_BIKES_IN_STATION,response.getResponse());
+	}
+
+	@Test
+	public void testBikeDownSuccess() {
+		testBikeUpSuccess();
+		BikeRequest request = BikeRequest.newBuilder()
+				.setUsername(TEST_USER_NAME)
+				.setLatitude(TEST_STATION_LATITUDE)
+				.setLongitude(TEST_STATION_LONGITUDE)
+				.setStationId(TEST_STATION_ID)
+				.build();
+		BikeResponse response = frontend.bikeDown(request);
+		assertEquals(BikeResponse.Response.OK,response.getResponse());
+	}
+
+	@Test
+	public void testBikeDownFailure1() {
+		BikeRequest request = BikeRequest.newBuilder()
+				.setUsername(TEST_USER_WRONG_NAME)
+				.setLatitude(TEST_LATITUDE_1)
+				.setLongitude(TEST_LONGITUDE_1)
+				.setStationId(TEST_STATION_ID)
+				.build();
+		assertThrows(StatusRuntimeException.class, () -> {frontend.bikeDown(request);});
+	}
+
+	@Test
+	public void testBikeDownFailure2() {
+		BikeRequest request = BikeRequest.newBuilder()
+				.setUsername(TEST_USER_NAME)
+				.setLatitude(TEST_LATITUDE_1)
+				.setLongitude(TEST_LONGITUDE_1)
+				.setStationId(TEST_STATION_WRONG_ID)
+				.build();
+		assertThrows(StatusRuntimeException.class, () -> {frontend.bikeDown(request);});
+	}
+
+	@Test
+	public void testBikeDownFailure3() {
+		testBikeUpSuccess();
+		BikeRequest request = BikeRequest.newBuilder()
+				.setUsername(TEST_USER_NAME)
+				.setLatitude(TEST_LATITUDE_1)
+				.setLongitude(TEST_LONGITUDE_1)
+				.setStationId(TEST_STATION_ID)
+				.build();
+		BikeResponse response = frontend.bikeDown(request);
+		assertEquals(BikeResponse.Response.OUT_OF_RANGE,response.getResponse());
+	}
+
+	@Test
+	public void testBikeDownFailure4() {
+		BikeRequest request = BikeRequest.newBuilder()
+				.setUsername(TEST_USER_NAME)
+				.setLatitude(TEST_STATION_LATITUDE)
+				.setLongitude(TEST_STATION_LONGITUDE)
+				.setStationId(TEST_STATION_ID)
+				.build();
+		BikeResponse response = frontend.bikeDown(request);
+		assertEquals(BikeResponse.Response.NO_BIKE_REQUESTED,response.getResponse());
+	}
+
+	@Test
+	public void testBikeDownFailure5() {
+		testBikeUpSuccess();
+		BikeRequest request = BikeRequest.newBuilder()
+				.setUsername(TEST_USER_NAME)
+				.setLatitude(TEST_STATION_FULL_LATITUDE)
+				.setLongitude(TEST_STATION_FULL_LONGITUDE)
+				.setStationId(TEST_STATION_FULL_ID)
+				.build();
+		BikeResponse response = frontend.bikeDown(request);
+		assertEquals(BikeResponse.Response.STATION_IS_FULL,response.getResponse());
+	}
+
+
 	/*
 
 	// TO DO
@@ -177,32 +348,6 @@ public class HubIT extends BaseIT{
 		SysStatusRequest request = SysStatusRequest.newBuilder().build();
 		SysStatusResponse response = frontend.sysStatus(request);
 		assertEquals(TEST_MESSAGE,response.getOutput());
-	}
-
-	// TO DO
-	@Test
-	public void testBikeUpSuccess() {
-		BikeRequest request = BikeRequest.newBuilder()
-				.setUsername(TEST_USER_NAME)
-				.setLatitude(TEST_LATITUDE_1)
-				.setLongitude(TEST_LONGITUDE_1)
-				.setStationId(TEST_STATION_ID)
-				.build();
-		BikeResponse response = frontend.bikeUp(request);
-		assertEquals(,response.getResponse());
-	}
-
-	// TO DO
-	@Test
-	public void testBikeDownSuccess() {
-		BikeRequest request = BikeRequest.newBuilder()
-				.setUsername(TEST_USER_NAME)
-				.setLatitude(TEST_LATITUDE_1)
-				.setLongitude(TEST_LONGITUDE_1)
-				.setStationId(TEST_STATION_ID)
-				.build();
-		BikeResponse response = frontend.bikeDown(request);
-		assertEquals(,response.getResponse());
 	}
 	*/
 

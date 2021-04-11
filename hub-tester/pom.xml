@@ -21,7 +21,7 @@
 
 		<zook.serv>localhost</zook.serv>
 		<zook.port>2181</zook.port>
-		<hub.path>/grpc/bicloin/hub/</hub.path>
+		<hub.path>/grpc/bicloin/hub</hub.path>
 		<hub.i>1</hub.i><!-- instance number -->
 	</properties>
 
