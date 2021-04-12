@@ -255,7 +255,6 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         }
 
         InfoStationResponse.Builder builder = InfoStationResponse.newBuilder();
-        builder.setName(id);
         builder.setLatitude(station.getLatitude());
         builder.setLongitude(station.getLongitude());
         builder.setCapacity(station.getCapacity());
@@ -364,7 +363,7 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
     }
 
     @Override
-    public void reset(ResetRequest request, StreamObserver<ResetResponse> responseObserver) {
+    public void ctrlReset(CtrlResetRequest request, StreamObserver<CtrlResetResponse> responseObserver) {
         String password = request.getPassword();
 
         if (!password.equals(RESET_PASSWORD)) {
@@ -376,7 +375,7 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
                 importUsers(frontend, true);
                 importStations(frontend, true);
 
-                ResetResponse response = ResetResponse.newBuilder().build();
+                CtrlResetResponse response = CtrlResetResponse.newBuilder().build();
 
                 // Send a single response through the stream.
                 responseObserver.onNext(response);
