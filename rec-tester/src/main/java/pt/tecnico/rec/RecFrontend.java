@@ -5,6 +5,7 @@ import io.grpc.ManagedChannelBuilder;
 import pt.tecnico.rec.grpc.Rec;
 import pt.tecnico.rec.grpc.RecordServiceGrpc;
 import pt.ulisboa.tecnico.sdis.zk.*;
+import java.util.concurrent.TimeUnit;
 
 public class RecFrontend implements AutoCloseable {
 
@@ -14,25 +15,24 @@ public class RecFrontend implements AutoCloseable {
 
     public RecFrontend(String zooHost, int zooPort, String path) throws ZKNamingException {
         zk = new ZKNaming(zooHost, String.valueOf(zooPort));
-        ZKRecord record = zk.lookup(path);
-        String target = record.getURI();
-        channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
+        channel = ManagedChannelBuilder.forTarget(zk.lookup(path).getURI()).usePlaintext().build();
         stub = RecordServiceGrpc.newBlockingStub(channel);
+        //FIXME make sure rec responds?
     }
 
     public Rec.CtrlPingResponse ctrlPing(Rec.CtrlPingRequest request) {
-        return stub.ctrlPing(request);
+        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).ctrlPing(request);
     }
 
     public Rec.ReadResponse read(Rec.ReadRequest request) {
-        return stub.read(request);
+        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).read(request);
     }
 
     public Rec.WriteResponse write(Rec.WriteRequest request) {
-        return stub.write(request);
+        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).write(request);
     }
 
-    // FIXME
+    // FIXME best implementation
     public ZKNaming getZkNaming() {
         return zk;
     }

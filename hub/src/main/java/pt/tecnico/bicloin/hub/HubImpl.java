@@ -268,11 +268,14 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
             requests = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + id + "/requests").build()).getValue().unpack(Int32Value.class).getValue();
             returns = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + id + "/returns").build()).getValue().unpack(Int32Value.class).getValue();
 
+        // FIXME STATUS messages
+        } catch (StatusRuntimeException e) {
+            System.err.println("Caught exception with description: " + e.getStatus().getDescription());
+            responseObserver.onError(Status.DEADLINE_EXCEEDED.withDescription("Rec took too long to answer").asRuntimeException());
         } catch (InvalidProtocolBufferException e) {
             System.err.println("Caught when transferring data between hub and rec: " + e);
-            // FIXME throw responseObserver.onError()
+            responseObserver.onError(Status.DATA_LOSS.withDescription("Failure transferring data between hub and rec").asRuntimeException());
         }
-
 
         builder.setBikes(bikes);
         builder.setPickups(requests);

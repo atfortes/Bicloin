@@ -2,10 +2,12 @@ package pt.tecnico.bicloin.hub;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.StatusRuntimeException;
 import pt.tecnico.bicloin.hub.grpc.*;
 import pt.tecnico.bicloin.hub.grpc.HubServiceGrpc;
 import pt.ulisboa.tecnico.sdis.zk.*;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 public class HubFrontend implements AutoCloseable {
 
@@ -14,66 +16,70 @@ public class HubFrontend implements AutoCloseable {
 
     public HubFrontend(String zooHost, int zooPort, String path) throws ZKNamingException {
         ZKNaming zkNaming = new ZKNaming(zooHost, String.valueOf(zooPort));
-        findHub(zkNaming, path);
-    }
-
-    public void findHub(ZKNaming zk, String path) throws ZKNamingException {
-
-        ArrayList<ZKRecord> records = new ArrayList<>(zk.listRecords(path));
+        ArrayList<ZKRecord> records = new ArrayList<>(zkNaming.listRecords(path));
         for (ZKRecord record : records) {
             if (connectHub(record.getURI())) {
                 return;
             }
         }
-
         throw new ZKNamingException("No hub available");
     }
 
     public boolean connectHub(String hubURI) {
+
         channel = ManagedChannelBuilder.forTarget(hubURI).usePlaintext().build();
         stub = HubServiceGrpc.newBlockingStub(channel);
-        CtrlPingResponse response = ctrlPing(CtrlPingRequest.newBuilder().setInput("OK").build());
 
-        // FIXME timeout
-        return response.getOutput().equals("OK");
+        try {
+            CtrlPingResponse response = stub.withDeadlineAfter(1, TimeUnit.SECONDS).ctrlPing(CtrlPingRequest.newBuilder().setInput("OK").build());
+            return response.getOutput().equals("OK");
+
+        } catch (StatusRuntimeException e) {
+            // if hub fails to respond
+            // FIXME not sure if shutdown needed
+            channel.shutdown();
+            return false;
+        }
     }
 
     public BalanceResponse balance(BalanceRequest request) {
-        return stub.balance(request);
+        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).balance(request);
     }
 
     public BikeResponse bikeUp(BikeRequest request) {
-        return stub.bikeUp(request);
+        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).bikeUp(request);
     }
 
     public BikeResponse bikeDown(BikeRequest request) {
-        return stub.bikeDown(request);
+        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).bikeDown(request);
     }
 
     public InfoStationResponse infoStation(InfoStationRequest request) {
-        return stub.infoStation(request);
+        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).infoStation(request);
     }
 
     public LocateStationResponse locateStation(LocateStationRequest request) {
-        return stub.locateStation(request);
+        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).locateStation(request);
     }
 
     public CtrlPingResponse ctrlPing(CtrlPingRequest request) {
-        return stub.ctrlPing(request);
+        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).ctrlPing(request);
     }
 
-    public CtrlResetResponse ctrlReset(CtrlResetRequest request) { return stub.ctrlReset(request); }
+    public CtrlResetResponse ctrlReset(CtrlResetRequest request) {
+        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).ctrlReset(request);
+    }
 
     public SysStatusResponse sysStatus(SysStatusRequest request) {
-        return stub.sysStatus(request);
+        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).sysStatus(request);
     }
 
     public TopUpResponse topUp(TopUpRequest request) {
-        return stub.topUp(request);
+        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).topUp(request);
     }
 
     public DistanceResponse distance(DistanceRequest request) {
-        return stub.distance(request);
+        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).distance(request);
     }
 
     @Override
