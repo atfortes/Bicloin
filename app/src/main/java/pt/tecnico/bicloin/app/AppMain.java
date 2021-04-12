@@ -88,13 +88,14 @@ public class AppMain {
 
 
 		} catch (NumberFormatException e) {
-			System.out.println("incorrect usage, try >help");
+			System.out.println("Incorrect usage, try the command help");
 		} catch (StatusRuntimeException e) {
+			//FIXME timeout is set, print custom message?
 			System.out.println(e.getStatus().getDescription());
 		} catch (BicloinAppException e) {
 			System.out.println(e.getMessage());
 		} catch (Exception e) {
-			System.out.println("unexpected exception");
+			System.out.println("Unexpected exception");
 		}
 	}
 

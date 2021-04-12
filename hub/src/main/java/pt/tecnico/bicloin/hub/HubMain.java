@@ -1,6 +1,5 @@
 package pt.tecnico.bicloin.hub;
 
-
 import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
 import com.google.protobuf.Int32Value;
@@ -89,7 +88,7 @@ public class HubMain {
 		} catch(InterruptedException e){
 			System.err.println("Server was interrupted.");
 		} catch (IOException ie) {
-			System.err.println(String.valueOf(ie));
+			System.err.println(ie.getMessage());
 		}
 	}
 
