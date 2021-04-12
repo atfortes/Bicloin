@@ -88,7 +88,7 @@ public class App {
 
         StringBuilder res = new StringBuilder();
 
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < resp.getIdsCount(); i++) {
             String sid = resp.getIds(i);
             InfoStationResponse station = frontend.infoStation(InfoStationRequest.newBuilder().setStationId(sid).build());
             DistanceResponse distance = frontend.distance(DistanceRequest.newBuilder().setStationId(sid).setLat(lat).setLon(lon).build());
@@ -173,8 +173,15 @@ public class App {
 
 
     public String sys_status() {
-        // TODO
-        return "";
+        SysStatusResponse resp = frontend.sysStatus(SysStatusRequest.newBuilder().build());
+        StringBuilder res = new StringBuilder();
+
+        for (int i = 0; i < resp.getSequenceCount(); i++) {
+            SysStatusResponse.Reply reply = resp.getSequence(i);
+            res.append(String.format("Contacted %s with status: %s\n", reply.getPath(), reply.getStatus()));
+        }
+
+        return res.toString();
     }
 
 

@@ -10,10 +10,11 @@ public class RecFrontend implements AutoCloseable {
 
     final ManagedChannel channel;
     RecordServiceGrpc.RecordServiceBlockingStub stub;
+    ZKNaming zk;
 
     public RecFrontend(String zooHost, int zooPort, String path) throws ZKNamingException {
-        ZKNaming zkNaming = new ZKNaming(zooHost, String.valueOf(zooPort));
-        ZKRecord record = zkNaming.lookup(path);
+        zk = new ZKNaming(zooHost, String.valueOf(zooPort));
+        ZKRecord record = zk.lookup(path);
         String target = record.getURI();
         channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
         stub = RecordServiceGrpc.newBlockingStub(channel);
@@ -29,6 +30,11 @@ public class RecFrontend implements AutoCloseable {
 
     public Rec.WriteResponse write(Rec.WriteRequest request) {
         return stub.write(request);
+    }
+
+    // FIXME
+    public ZKNaming getZkNaming() {
+        return zk;
     }
 
     @Override

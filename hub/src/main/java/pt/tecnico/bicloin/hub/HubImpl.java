@@ -2,12 +2,15 @@ package pt.tecnico.bicloin.hub;
 
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
 import com.google.protobuf.Int32Value;
 import com.google.protobuf.InvalidProtocolBufferException;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import io.grpc.Status;
@@ -15,6 +18,8 @@ import pt.tecnico.bicloin.hub.grpc.*;
 import pt.tecnico.bicloin.hub.domain.*;
 import pt.tecnico.rec.RecFrontend;
 import pt.tecnico.rec.grpc.Rec;
+import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
+import pt.ulisboa.tecnico.sdis.zk.ZKRecord;
 
 import static pt.tecnico.bicloin.hub.HubMain.importStations;
 import static pt.tecnico.bicloin.hub.HubMain.importUsers;
@@ -328,7 +333,34 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
     @Override
     public void sysStatus(SysStatusRequest request, StreamObserver<SysStatusResponse> responseObserver) {
-        // TODO
+
+        try {
+            SysStatusResponse.Builder builder = SysStatusResponse.newBuilder();
+            ArrayList<ZKRecord> paths = new ArrayList<>(frontend.getZkNaming().listRecords("/grpc/bicloin/hub"));
+
+            //FIXME define ping in shared proto
+
+            for (ZKRecord record : paths) {
+                ManagedChannel channel = ManagedChannelBuilder.forTarget(record.getURI()).usePlaintext().build();
+                HubServiceGrpc.HubServiceBlockingStub stub = HubServiceGrpc.newBlockingStub(channel);
+                CtrlPingResponse response = stub.ctrlPing(CtrlPingRequest.newBuilder().setInput("OK").build());
+                boolean res = response.getOutput().equals("OK");
+                builder.addSequence(SysStatusResponse.Reply.newBuilder().setPath(record.getPath()).setStatus(res ? SysStatusResponse.Reply.Status.UP:SysStatusResponse.Reply.Status.DOWN).build());
+                channel.shutdownNow();
+            }
+
+            // FIXME hardcode rec/1
+            Rec.CtrlPingResponse response = frontend.ctrlPing(Rec.CtrlPingRequest.newBuilder().setInput("OK").build());
+            builder.addSequence(SysStatusResponse.Reply.newBuilder().setPath("/grpc/bicloin/rec/1").setStatus(response.getOutput().equals("OK") ? SysStatusResponse.Reply.Status.UP:SysStatusResponse.Reply.Status.DOWN).build());
+
+            responseObserver.onNext(builder.build());
+            responseObserver.onCompleted();
+
+        }  catch (ZKNamingException e) {
+            System.out.println(e.getMessage());
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Unable to communicate with zk").asRuntimeException());
+        }
+
     }
 
     @Override
@@ -350,7 +382,7 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
                 responseObserver.onNext(response);
                 // Notify the client that the operation has been completed.
                 responseObserver.onCompleted();
-            } catch(IOException ie) {
+            } catch (IOException ie) {
                 System.err.println(String.valueOf(ie));
             }
 
