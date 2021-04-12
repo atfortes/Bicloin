@@ -255,6 +255,7 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         }
 
         InfoStationResponse.Builder builder = InfoStationResponse.newBuilder();
+        builder.setName(station.getName());
         builder.setLatitude(station.getLatitude());
         builder.setLongitude(station.getLongitude());
         builder.setCapacity(station.getCapacity());

@@ -5,8 +5,9 @@ import org.junit.jupiter.api.*;
 import pt.tecnico.bicloin.hub.grpc.*;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class HubIT extends BaseIT{
 
@@ -339,16 +340,11 @@ public class HubIT extends BaseIT{
 		assertEquals(BikeResponse.Response.STATION_IS_FULL,response.getResponse());
 	}
 
-
-	/*
-
-	// TO DO
 	@Test
 	public void testSysStatusSuccess() {
 		SysStatusRequest request = SysStatusRequest.newBuilder().build();
 		SysStatusResponse response = frontend.sysStatus(request);
-		assertEquals(TEST_MESSAGE,response.getOutput());
+		assertFalse(response.getSequenceList() == null);
 	}
-	*/
 
 }
