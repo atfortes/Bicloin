@@ -4,7 +4,7 @@ package pt.tecnico.rec;
 import java.util.logging.Logger;
 
 import com.google.protobuf.Any;
-import com.google.protobuf.GeneratedMessage;
+import io.grpc.Context;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import pt.tecnico.rec.domain.RecordInfo;
@@ -25,6 +25,12 @@ public class RecordMainImpl extends RecordServiceGrpc.RecordServiceImplBase {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Name not valid").asRuntimeException());
             return;
         }
+
+        if (Context.current().isCancelled()) {
+            responseObserver.onError(Status.CANCELLED.withDescription("Cancelled by client").asRuntimeException());
+            return;
+        }
+
         LOGGER.info("Read: " + name);
         Any value = rec.getValue(name);
         var builder = Rec.ReadResponse.newBuilder();
@@ -44,6 +50,12 @@ public class RecordMainImpl extends RecordServiceGrpc.RecordServiceImplBase {
             return;
         }
         Any value = request.getValue();
+
+        if (Context.current().isCancelled()) {
+            responseObserver.onError(Status.CANCELLED.withDescription("Cancelled by client").asRuntimeException());
+            return;
+        }
+
         LOGGER.info("Write: (" + name + ", " + value + ")");
         rec.writeValue(name,value);
         LOGGER.info("Write Success");

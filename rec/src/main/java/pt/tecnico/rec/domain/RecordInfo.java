@@ -11,7 +11,11 @@ public class RecordInfo{
 
     public synchronized Any getValue(String key){
         Any response =  values.get(key);
-        if (response == null) { writeValue(key, Any.newBuilder().build());}
+
+        if (response == null) {
+            writeValue(key, Any.newBuilder().build());
+        }
+
         return response;
     }
 

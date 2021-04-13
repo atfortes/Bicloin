@@ -34,18 +34,22 @@ public class AppMain {
 
 			App app = new App(lat, lon, uid, phone, frontend);
 			Scanner in = new Scanner(System.in);
-			do {
-				System.out.print("> ");
+
+			System.out.print("> ");
+			while (in.hasNextLine()) {
 				command(in.nextLine(), app);
-			} while (in.hasNextLine());
+				System.out.print("> ");
+			}
 
 			in.close();
 
 		} catch (ZKNamingException e) {
 			System.err.println(e.getMessage());
 			System.err.println("Exception reaching hub, shutting down");
+		} catch (NumberFormatException e) {
+			System.err.println(e.getMessage());
+			System.err.println("Incorrect arguments");
 		}
-
 	}
 
 	private static void command(String s, App app) {
@@ -79,9 +83,9 @@ public class AppMain {
 			} else if (content.length == 1 && content[0].equals("help")) {
 				System.out.println(help());
 			} else if (content.length == 2 && content[0].equals("zzz")) {
-				System.out.printf("sleeping for %s%n", content[1]);
+				System.out.printf("sleeping for %s ms%n", content[1]);
 				Thread.sleep(Integer.parseInt(content[1]));
-			} else if (content.length == 0 || content[0].equals("#")) {
+			} else if (content.length > 0 && content[0].charAt(0) == '#') {
 				// skip comments and empty lines
 				assert true;
 			} else System.out.println("incorrect usage, try the command help");
@@ -90,7 +94,6 @@ public class AppMain {
 		} catch (NumberFormatException e) {
 			System.out.println("Incorrect usage, try the command help");
 		} catch (StatusRuntimeException e) {
-			//FIXME timeout is set, print custom message?
 			System.out.println(e.getStatus().getDescription());
 		} catch (BicloinAppException e) {
 			System.out.println(e.getMessage());

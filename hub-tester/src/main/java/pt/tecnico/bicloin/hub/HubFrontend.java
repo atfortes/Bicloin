@@ -22,6 +22,7 @@ public class HubFrontend implements AutoCloseable {
                 return;
             }
         }
+
         throw new ZKNamingException("No hub available");
     }
 
@@ -36,7 +37,6 @@ public class HubFrontend implements AutoCloseable {
 
         } catch (StatusRuntimeException e) {
             // if hub fails to respond
-            // FIXME not sure if shutdown needed
             channel.shutdown();
             return false;
         }

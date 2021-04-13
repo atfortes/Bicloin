@@ -1,6 +1,5 @@
 package pt.tecnico.bicloin.hub;
 
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,11 +8,8 @@ import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
 import com.google.protobuf.Int32Value;
 import com.google.protobuf.InvalidProtocolBufferException;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-import io.grpc.StatusRuntimeException;
+import io.grpc.*;
 import io.grpc.stub.StreamObserver;
-import io.grpc.Status;
 import pt.tecnico.bicloin.hub.grpc.*;
 import pt.tecnico.bicloin.hub.domain.*;
 import pt.tecnico.rec.RecFrontend;
@@ -28,12 +24,10 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
     private static final Logger LOGGER = Logger.getLogger(HubImpl.class.getName());
 
-    private final int euro2bic = 10;
+    private final int EURO2BIC = 10;
     private final String RESET_PASSWORD = "super_strong_reset_password";
-
-    private HubInfo hub = new HubInfo();
-
-    private RecFrontend frontend;
+    private final HubInfo hub = new HubInfo();
+    private final RecFrontend frontend;
 
     public HubImpl(List<User> userList, List<Station> stationList, RecFrontend frontend) {
         hub.setUsers(userList);
@@ -46,6 +40,7 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
         String username = request.getUsername();
         User user = hub.getUser(username);
+
         if (user == null) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
             return;
@@ -54,23 +49,18 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         try {
 
             Rec.ReadResponse res = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/balance").build());
-            if (res.getValue().is(Int32Value.class)) {
-                Int32Value balance = res.getValue().unpack(Int32Value.class);
-                BalanceResponse response = BalanceResponse.newBuilder().setBalance(balance.getValue()).build();
+            Int32Value balance = res.getValue().unpack(Int32Value.class);
+            BalanceResponse response = BalanceResponse.newBuilder().setBalance(balance.getValue()).build();
 
-                // Send a single response through the stream.
-                responseObserver.onNext(response);
-                // Notify the client that the operation has been completed.
-                responseObserver.onCompleted();
-            }
-            else {
-                responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Balance not found").asRuntimeException());
-            }
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
 
         } catch (StatusRuntimeException e) {
             System.err.println("Caught exception with description: " + e.getStatus().getDescription());
+            responseObserver.onError(Status.DEADLINE_EXCEEDED.withDescription("Rec took too long to answer").asRuntimeException());
         } catch (InvalidProtocolBufferException e) {
-            System.err.println("Caught when transferring data between hub and rec: " + e);
+            System.err.println("Caught exception when transferring data between hub and rec: " + e);
+            responseObserver.onError(Status.DATA_LOSS.withDescription("Failure transferring data between hub and rec").asRuntimeException());
         }
     }
 
@@ -83,10 +73,12 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
             return;
         }
+
         if (!request.getPhoneNumber().equals(user.getPhone())) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Phone number incorrect").asRuntimeException());
             return;
         }
+
         int amount = request.getAmount();
         if (!(1 <= amount && amount <= 20)) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Amount not in 1-20 interval").asRuntimeException());
@@ -95,28 +87,26 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
         try {
 
+            if (Context.current().isCancelled()) {
+                responseObserver.onError(Status.CANCELLED.withDescription("Cancelled by client").asRuntimeException());
+                return;
+            }
+
             Rec.ReadResponse res = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/balance").build());
-            if (res.getValue().is(Int32Value.class)) {
+            Int32Value balance = res.getValue().unpack(Int32Value.class);
+            Int32Value newBalance = Int32Value.newBuilder().setValue(balance.getValue() + amount*EURO2BIC).build();
+            frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + username + "/balance").setValue(Any.pack(newBalance)).build());
+            TopUpResponse response = TopUpResponse.newBuilder().setBalance(newBalance.getValue()).build();
 
-                Int32Value balance = res.getValue().unpack(Int32Value.class);
-                Int32Value newBalance = Int32Value.newBuilder().setValue(balance.getValue() + amount*euro2bic).build();
-                frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + username + "/balance").setValue(Any.pack(newBalance)).build());
-
-                TopUpResponse response = TopUpResponse.newBuilder().setBalance(newBalance.getValue()).build();
-
-                // Send a single response through the stream.
-                responseObserver.onNext(response);
-                // Notify the client that the operation has been completed.
-                responseObserver.onCompleted();
-            }
-            else {
-                responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Balance not found").asRuntimeException());
-            }
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
 
         } catch (StatusRuntimeException e) {
             System.err.println("Caught exception with description: " + e.getStatus().getDescription());
+            responseObserver.onError(Status.DEADLINE_EXCEEDED.withDescription("Rec took too long to answer").asRuntimeException());
         } catch (InvalidProtocolBufferException e) {
-            System.err.println("Caught when transferring data between hub and rec: " + e);
+            System.err.println("Caught exception when transferring data between hub and rec: " + e);
+            responseObserver.onError(Status.DATA_LOSS.withDescription("Failure transferring data between hub and rec").asRuntimeException());
         }
     }
 
@@ -129,12 +119,14 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
             return;
         }
+
         String stationId = request.getStationId();
         Station station = hub.getStation(stationId);
         if (station == null) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
             return;
         }
+
         float latitude = request.getLatitude();
         float longitude = request.getLongitude();
         if (station.haversine_distance(latitude, longitude) >= 200) {
@@ -145,6 +137,11 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         }
 
         try {
+
+            if (Context.current().isCancelled()) {
+                responseObserver.onError(Status.CANCELLED.withDescription("Cancelled by client").asRuntimeException());
+                return;
+            }
 
             boolean userHasBike = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/bike").build()).getValue().unpack(BoolValue.class).getValue();
             int bikesInStation = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + stationId + "/bikes").build()).getValue().unpack(Int32Value.class).getValue();
@@ -170,15 +167,15 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
                 response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.OK).build();
             }
 
-            // Send a single response through the stream.
             responseObserver.onNext(response);
-            // Notify the client that the operation has been completed.
             responseObserver.onCompleted();
 
         } catch (StatusRuntimeException e) {
             System.err.println("Caught exception with description: " + e.getStatus().getDescription());
+            responseObserver.onError(Status.DEADLINE_EXCEEDED.withDescription("Rec took too long to answer").asRuntimeException());
         } catch (InvalidProtocolBufferException e) {
-            System.err.println("Caught when transferring data between hub and rec: " + e);
+            System.err.println("Caught exception when transferring data between hub and rec: " + e);
+            responseObserver.onError(Status.DATA_LOSS.withDescription("Failure transferring data between hub and rec").asRuntimeException());
         }
     }
 
@@ -191,12 +188,14 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
             return;
         }
+
         String stationId = request.getStationId();
         Station station = hub.getStation(stationId);
         if (station == null) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
             return;
         }
+
         float latitude = request.getLatitude();
         float longitude = request.getLongitude();
         if (station.haversine_distance(latitude, longitude) >= 200) {
@@ -208,10 +207,14 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
         try {
 
+            if (Context.current().isCancelled()) {
+                responseObserver.onError(Status.CANCELLED.withDescription("Cancelled by client").asRuntimeException());
+                return;
+            }
+
             int stationCapacity = station.getCapacity();
             boolean userHasBike = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/bike").build()).getValue().unpack(BoolValue.class).getValue();
             int bikesInStation = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + stationId + "/bikes").build()).getValue().unpack(Int32Value.class).getValue();
-
             BikeResponse response;
 
             if (!userHasBike) {
@@ -231,15 +234,15 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
                 response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.OK).build();
             }
 
-            // Send a single response through the stream.
             responseObserver.onNext(response);
-            // Notify the client that the operation has been completed.
             responseObserver.onCompleted();
 
         } catch (StatusRuntimeException e) {
             System.err.println("Caught exception with description: " + e.getStatus().getDescription());
+            responseObserver.onError(Status.DEADLINE_EXCEEDED.withDescription("Rec took too long to answer").asRuntimeException());
         } catch (InvalidProtocolBufferException e) {
-            System.err.println("Caught when transferring data between hub and rec: " + e);
+            System.err.println("Caught exception when transferring data between hub and rec: " + e);
+            responseObserver.onError(Status.DATA_LOSS.withDescription("Failure transferring data between hub and rec").asRuntimeException());
         }
     }
 
@@ -259,32 +262,29 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         builder.setLongitude(station.getLongitude());
         builder.setCapacity(station.getCapacity());
         builder.setAward(station.getAward());
-        int bikes = 0;
-        int requests = 0 ;
-        int returns = 0;
 
         try {
-            bikes = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + id + "/bikes").build()).getValue().unpack(Int32Value.class).getValue();
-            requests = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + id + "/requests").build()).getValue().unpack(Int32Value.class).getValue();
-            returns = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + id + "/returns").build()).getValue().unpack(Int32Value.class).getValue();
 
-        // FIXME STATUS messages
+            // no need to verify client cancellation, innocuous function
+            int bikes = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + id + "/bikes").build()).getValue().unpack(Int32Value.class).getValue();
+            int requests = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + id + "/requests").build()).getValue().unpack(Int32Value.class).getValue();
+            int returns = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + id + "/returns").build()).getValue().unpack(Int32Value.class).getValue();
+
+            builder.setBikes(bikes);
+            builder.setPickups(requests);
+            builder.setDeliveries(returns);
+
+            responseObserver.onNext(builder.build());
+            responseObserver.onCompleted();
+
         } catch (StatusRuntimeException e) {
             System.err.println("Caught exception with description: " + e.getStatus().getDescription());
             responseObserver.onError(Status.DEADLINE_EXCEEDED.withDescription("Rec took too long to answer").asRuntimeException());
+
         } catch (InvalidProtocolBufferException e) {
-            System.err.println("Caught when transferring data between hub and rec: " + e);
+            System.err.println("Caught exception when transferring data between hub and rec: " + e);
             responseObserver.onError(Status.DATA_LOSS.withDescription("Failure transferring data between hub and rec").asRuntimeException());
         }
-
-        builder.setBikes(bikes);
-        builder.setPickups(requests);
-        builder.setDeliveries(returns);
-
-        // Send a single response through the stream.
-        responseObserver.onNext(builder.build());
-        // Notify the client that the operation has been completed.
-        responseObserver.onCompleted();
     }
 
     @Override
@@ -294,12 +294,9 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         float lat = request.getLatitude();
         float lon = request.getLongitude();
 
-        // untested
         LocateStationResponse response = LocateStationResponse.newBuilder().addAllIds(hub.sort_stations(k, lat, lon)).build();
 
-        // Send a single response through the stream.
         responseObserver.onNext(response);
-        // Notify the client that the operation has been completed.
         responseObserver.onCompleted();
     }
 
@@ -315,12 +312,10 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         }
 
         else {
-            Double d = station.haversine_distance(lat, lon);
-            DistanceResponse response = DistanceResponse.newBuilder().setDistance(d.intValue()).build();
+            double d = station.haversine_distance(lat, lon);
+            DistanceResponse response = DistanceResponse.newBuilder().setDistance((int) d).build();
 
-            // Send a single response through the stream.
             responseObserver.onNext(response);
-            // Notify the client that the operation has been completed.
             responseObserver.onCompleted();
         }
     }
@@ -340,20 +335,23 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
             SysStatusResponse.Builder builder = SysStatusResponse.newBuilder();
             ArrayList<ZKRecord> paths = new ArrayList<>(frontend.getZkNaming().listRecords("/grpc/bicloin/hub"));
 
-            //FIXME define ping in shared proto
-
             for (ZKRecord record : paths) {
                 ManagedChannel channel = ManagedChannelBuilder.forTarget(record.getURI()).usePlaintext().build();
                 HubServiceGrpc.HubServiceBlockingStub stub = HubServiceGrpc.newBlockingStub(channel);
                 CtrlPingResponse response = stub.ctrlPing(CtrlPingRequest.newBuilder().setInput("OK").build());
-                boolean res = response.getOutput().equals("OK");
-                builder.addSequence(SysStatusResponse.Reply.newBuilder().setPath(record.getPath()).setStatus(res ? SysStatusResponse.Reply.Status.UP:SysStatusResponse.Reply.Status.DOWN).build());
+                builder.addSequence(SysStatusResponse.Reply.newBuilder()
+                                        .setPath(record.getPath())
+                                        .setStatus(response.getOutput().equals("OK") ? SysStatusResponse.Reply.Status.UP:SysStatusResponse.Reply.Status.DOWN)
+                                        .build());
                 channel.shutdownNow();
             }
 
             // FIXME hardcode rec/1
             Rec.CtrlPingResponse response = frontend.ctrlPing(Rec.CtrlPingRequest.newBuilder().setInput("OK").build());
-            builder.addSequence(SysStatusResponse.Reply.newBuilder().setPath("/grpc/bicloin/rec/1").setStatus(response.getOutput().equals("OK") ? SysStatusResponse.Reply.Status.UP:SysStatusResponse.Reply.Status.DOWN).build());
+            builder.addSequence(SysStatusResponse.Reply.newBuilder()
+                                    .setPath("/grpc/bicloin/rec/1")
+                                    .setStatus(response.getOutput().equals("OK") ? SysStatusResponse.Reply.Status.UP : SysStatusResponse.Reply.Status.DOWN)
+                                    .build());
 
             responseObserver.onNext(builder.build());
             responseObserver.onCompleted();
@@ -361,6 +359,9 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         }  catch (ZKNamingException e) {
             System.out.println(e.getMessage());
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Unable to communicate with zk").asRuntimeException());
+        }  catch (StatusRuntimeException e) {
+            System.err.println("Caught exception with description: " + e.getStatus().getDescription());
+            responseObserver.onError(Status.DEADLINE_EXCEEDED.withDescription("Rec took too long to answer").asRuntimeException());
         }
 
     }
@@ -380,12 +381,15 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
                 CtrlResetResponse response = CtrlResetResponse.newBuilder().build();
 
-                // Send a single response through the stream.
                 responseObserver.onNext(response);
-                // Notify the client that the operation has been completed.
                 responseObserver.onCompleted();
+
             } catch (IOException ie) {
-                System.err.println(String.valueOf(ie));
+                System.err.println(ie.getMessage());
+                responseObserver.onError(Status.INTERNAL.withDescription("Failed to reset Rec").asRuntimeException());
+            } catch (StatusRuntimeException e) {
+                System.err.println("Caught exception with description: " + e.getStatus().getDescription());
+                responseObserver.onError(Status.DEADLINE_EXCEEDED.withDescription("Rec took too long to answer").asRuntimeException());
             }
 
         }

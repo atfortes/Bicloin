@@ -50,17 +50,18 @@ public class RecordMain {
 		try{
 			server.start();
 		}
-		catch(java.io.IOException e){
+		catch (java.io.IOException e){
 			System.err.println("Caught exception when starting the server: " + e);
 			return;
 		}
+
 		try{
 			System.out.println("Contacting ZooKeeper at " + zooHost + ":" + zooPort + "...");
 			zkNaming = new ZKNaming(zooHost, String.valueOf(zooPort));
 			System.out.println("Binding " + path + " to " + host + ":" + port + "...");
 			zkNaming.rebind(path , host , Integer.toString(port));
 		}
-		catch(pt.ulisboa.tecnico.sdis.zk.ZKNamingException e){
+		catch (ZKNamingException e){
 			System.err.println("Caught exception during Zookeeper bind: " + e);
 			return;
 		}

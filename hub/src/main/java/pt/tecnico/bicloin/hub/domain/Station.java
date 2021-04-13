@@ -8,8 +8,7 @@ public class Station {
     private final float longitude;
     private final int capacity;
     private final int award;
-
-
+    
     public Station(String name, String id, float latitude, float longitude, int capacity, int award) {
         this.name = name;
         this.id = id;
@@ -44,7 +43,7 @@ public class Station {
     }
 
     public double haversine_distance(float lat, float lon) {
-        // earth radius
+        // earth radius in m
         final double r = 6371000;
         double avg_lat = Math.toRadians(lat - latitude) / 2;
         double avg_lon = Math.toRadians(lon - longitude) / 2;

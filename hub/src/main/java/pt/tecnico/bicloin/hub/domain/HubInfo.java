@@ -1,15 +1,15 @@
 package pt.tecnico.bicloin.hub.domain;
 
-
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.stream.Collectors;
 
 public class HubInfo {
 
-    private HashMap<String, User> users = new HashMap<>();
-    private HashMap<String, Station> stations = new HashMap<>();
+    private final HashMap<String, User> users = new HashMap<>();
+    private final HashMap<String, Station> stations = new HashMap<>();
 
     public User getUser(String username) {
         return users.get(username);
@@ -30,18 +30,9 @@ public class HubInfo {
     public ArrayList<String> sort_stations(int k, float lat, float lon) {
 
         ArrayList<Station> gather = new ArrayList<>(stations.values());
-        gather.sort((Station s1, Station s2) ->
-                Double.compare(s1.haversine_distance(lat, lon), s2.haversine_distance(lat, lon)));
-                // compare to is cleaner but wasn't working
-                //s1.haversine_distance(lat, lon).compareTo(s2.haversine_distance(lat, lon)));
-
-        ArrayList<String> res = new ArrayList<>();
-
-        for (int i = 0; i < Math.min(k, stations.size()); i++) {
-            res.add(gather.get(i).getId());
-        }
-
-        return res;
+        gather.sort(Comparator.comparingDouble((Station s) -> s.haversine_distance(lat, lon)));
+        return gather.subList(0, Math.min(gather.size(), k))
+                .stream().map(Station::getId).collect(Collectors.toCollection(ArrayList::new));
     }
 
 }

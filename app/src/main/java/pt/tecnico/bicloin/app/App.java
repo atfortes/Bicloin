@@ -14,7 +14,6 @@ public class App {
     private final HashMap<String, ArrayList<Float>> tags;
     private final HubFrontend frontend;
 
-
     public App(float lat, float lon, String id, String phone, HubFrontend frontend) {
         this.lat = lat;
         this.lon = lon;
@@ -26,23 +25,22 @@ public class App {
 
     public String balance() {
 
-
-
-        BalanceRequest.Builder builder = BalanceRequest.newBuilder();
-        builder.setUsername(id);
-        BalanceResponse resp = frontend.balance(builder.build());
+        BalanceRequest request = BalanceRequest.newBuilder()
+                .setUsername(id)
+                .build();
+        BalanceResponse resp = frontend.balance(request);
 
         return String.format("%s %d BIC", id, resp.getBalance());
     }
 
-
     public String topUp(int amount) {
 
-        TopUpRequest.Builder builder = TopUpRequest.newBuilder();
-        builder.setUsername(id);
-        builder.setAmount(amount);
-        builder.setPhoneNumber(phone);
-        TopUpResponse resp = frontend.topUp(builder.build());
+        TopUpRequest request = TopUpRequest.newBuilder()
+                .setUsername(id)
+                .setAmount(amount)
+                .setPhoneNumber(phone)
+                .build();
+        TopUpResponse resp = frontend.topUp(request);
 
         return String.format("%s %d BIC", id, resp.getBalance());
     }
@@ -80,11 +78,12 @@ public class App {
 
     public String scan(int n) {
 
-        LocateStationRequest.Builder builder = LocateStationRequest.newBuilder();
-        builder.setLatitude(lat);
-        builder.setLongitude(lon);
-        builder.setK(n);
-        LocateStationResponse resp = frontend.locateStation(builder.build());
+        LocateStationRequest request = LocateStationRequest.newBuilder()
+                .setLatitude(lat)
+                .setLongitude(lon)
+                .setK(n)
+                .build();
+        LocateStationResponse resp = frontend.locateStation(request);
 
         StringBuilder res = new StringBuilder();
 
@@ -98,30 +97,31 @@ public class App {
                     sid, station.getLatitude(), station.getLongitude(), station.getCapacity(), station.getAward(), station.getBikes(), distance.getDistance()));
 
         }
-        return res.toString();
+
+        // delete last "/n"
+        return res.deleteCharAt(res.length()-1).toString();
     }
 
     public String info(String name) {
 
-        InfoStationRequest.Builder builder = InfoStationRequest.newBuilder();
-        builder.setStationId(name);
-        InfoStationResponse resp = frontend.infoStation(builder.build());
-        String url = String.format("https://www.google.com/maps/place/%f,%f", resp.getLatitude(), resp.getLongitude());
-
+        InfoStationRequest request = InfoStationRequest.newBuilder()
+                .setStationId(name)
+                .build();
+        InfoStationResponse resp = frontend.infoStation(request);
         return String.format("%s, lat %f, long %f, %d docas, %f BIC prémio, %d bicicletas, %d levantamentos, %d devoluções, %s",
                 resp.getName(), resp.getLatitude(), resp.getLongitude(), resp.getCapacity(), resp.getAward(), resp.getBikes(),
-                resp.getPickups(), resp.getDeliveries(), url);
+                resp.getPickups(), resp.getDeliveries(), String.format("https://www.google.com/maps/place/%f,%f", resp.getLatitude(), resp.getLongitude()));
     }
-
 
     public String bikeUp(String name) throws BicloinAppException {
 
-        BikeRequest.Builder builder = BikeRequest.newBuilder();
-        builder.setUsername(id);
-        builder.setLatitude(lat);
-        builder.setLongitude(lon);
-        builder.setStationId(name);
-        BikeResponse.Response resp = frontend.bikeUp(builder.build()).getResponse();
+        BikeRequest request = BikeRequest.newBuilder()
+                .setUsername(id)
+                .setLatitude(lat)
+                .setLongitude(lon)
+                .setStationId(name)
+                .build();
+        BikeResponse.Response resp = frontend.bikeUp(request).getResponse();
 
         switch (resp) {
             case OK:
@@ -142,12 +142,13 @@ public class App {
 
     public String bikeDown(String name) throws BicloinAppException {
 
-        BikeRequest.Builder builder = BikeRequest.newBuilder();
-        builder.setUsername(id);
-        builder.setLatitude(lat);
-        builder.setLongitude(lon);
-        builder.setStationId(name);
-        BikeResponse.Response resp = frontend.bikeDown(builder.build()).getResponse();
+        BikeRequest request = BikeRequest.newBuilder()
+                .setUsername(id)
+                .setLatitude(lat)
+                .setLongitude(lon)
+                .setStationId(name)
+                .build();
+        BikeResponse.Response resp = frontend.bikeDown(request).getResponse();
 
         switch (resp) {
             case OK:
@@ -164,13 +165,12 @@ public class App {
     }
 
     public String ping() {
-
-        CtrlPingRequest.Builder builder = CtrlPingRequest.newBuilder();
-        builder.setInput("hello");
-        CtrlPingResponse resp = frontend.ctrlPing(builder.build());
+        CtrlPingRequest request = CtrlPingRequest.newBuilder()
+                .setInput("hello")
+                .build();
+        CtrlPingResponse resp = frontend.ctrlPing(request);
         return "received: " + resp.getOutput();
     }
-
 
     public String sys_status() {
         SysStatusResponse resp = frontend.sysStatus(SysStatusRequest.newBuilder().build());
@@ -181,7 +181,7 @@ public class App {
             res.append(String.format("Contacted %s with status: %s\n", reply.getPath(), reply.getStatus()));
         }
 
-        return res.toString();
+        return res.deleteCharAt(res.length()-1).toString();
     }
 
 
