@@ -49,7 +49,7 @@ message InfoStationResponse {
   float latitude = 2;
   float longitude = 3;
   int32 capacity = 4;
-  float award = 5;
+  int32 award = 5;
   int32 bikes = 6;
   int32 pickups = 7;
   int32 deliveries = 8;

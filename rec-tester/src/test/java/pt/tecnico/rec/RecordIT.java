@@ -12,11 +12,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class RecordIT extends BaseIT {
 
-	static final String TEST_MESSAGE = "TEST";
-	static final String TEST_NAME = "name";
 	static final String INVALID_TEST_NAME = "";
+
+	static final String TEST_MESSAGE = "TEST";
+
+	static final String TEST_NAME = "name";
 	static final String TEST_VALUE_STRING = "value";
 	static final Any TEST_VALUE = Any.pack(StringValue.newBuilder().setValue(TEST_VALUE_STRING).build());
+
+	static final String TEST_NOT_INITIALIZED_NAME = "not_initialized_name";
+	static final Any TEST_EMPTY_VALUE = Any.newBuilder().build();
 
 	static RecFrontend frontend = null;
 
@@ -56,6 +61,13 @@ public class RecordIT extends BaseIT {
 		Rec.CtrlPingRequest request = Rec.CtrlPingRequest.newBuilder().setInput(TEST_MESSAGE).build();
 		Rec.CtrlPingResponse response = frontend.ctrlPing(request);
 		assertEquals(TEST_MESSAGE,response.getOutput());
+	}
+
+	@Test
+	public void testNotInitializedReadSuccess() {
+		Rec.ReadRequest request = Rec.ReadRequest.newBuilder().setName(TEST_NOT_INITIALIZED_NAME).build();
+		Rec.ReadResponse response = frontend.read(request);
+		assertEquals(TEST_EMPTY_VALUE, response.getValue());
 	}
 
 	@Test

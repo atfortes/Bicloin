@@ -14,6 +14,7 @@ import pt.ulisboa.tecnico.sdis.zk.*;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class HubMain {
@@ -87,12 +88,14 @@ public class HubMain {
 			System.err.println("Caught exception during Zookeeper bind: " + e);
 		} catch(InterruptedException e){
 			System.err.println("Server was interrupted.");
-		} catch (IOException ie) {
-			System.err.println(ie.getMessage());
+		} catch (IOException | ImportDataException e) {
+			System.err.println(e.getMessage());
+		} catch (NumberFormatException e) {
+			System.err.println("NumberFormatException: " + e.getMessage());
 		}
 	}
 
-	public static void importUsers(RecFrontend frontend, boolean initRec) throws IOException {
+	public static void importUsers(RecFrontend frontend, boolean initRec) throws IOException, ImportDataException {
 
 		try(BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(
 				System.getProperty("user.dir") + "/" + usersFile)))) {
@@ -102,10 +105,23 @@ public class HubMain {
 				String[] userDetails = line.split(",");
 
 				if(userDetails.length > 0 ) {
+
+					if(userDetails[0].length() < 3 || userDetails[0].length() > 10 || !userDetails[0].matches("[A-Za-z0-9]+")) {
+						throw new ImportDataException("Invalid username: " + userDetails[0]);
+					}
+
+					if(userDetails[1].length() < 3 || userDetails[1].length() > 30) {
+						throw new ImportDataException("Invalid name: " + userDetails[1]);
+					}
+
+					if(!userDetails[2].matches("^\\+\\d{3,15}$")) {
+						throw new ImportDataException("Invalid phone number: " + userDetails[2]);
+					}
+
 					User u = new User(userDetails[0], userDetails[1], userDetails[2]);
 					userList.add(u);
 
-					if (initRec) {
+					if(initRec) {
 						frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + u.getUsername() + "/balance")
 								.setValue(Any.pack(Int32Value.newBuilder().setValue(0).build())).build());
 						frontend.write(Rec.WriteRequest.newBuilder().setName("users/" + u.getUsername() + "/bike")
@@ -115,13 +131,13 @@ public class HubMain {
 				}
 			}
 
-		} catch(IOException ie) {
+		} catch(IOException | ImportDataException e) {
 			System.err.println("Caught exception while parsing the users file: ");
-			throw ie;
+			throw e;
 		}
 	}
 
-	public static void importStations(RecFrontend frontend, boolean initRec) throws IOException {
+	public static void importStations(RecFrontend frontend, boolean initRec) throws IOException, ImportDataException {
 
 		try(BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(
 				System.getProperty("user.dir") + "/" + stationsFile)))) {
@@ -131,12 +147,21 @@ public class HubMain {
 				String[] stationDetails = line.split(",");
 
 				if(stationDetails.length > 0 ) {
+
+					if(stationDetails[0].length() < 3 || stationDetails[0].length() > 30) {
+						throw new ImportDataException("Invalid name: " + stationDetails[0]);
+					}
+
+					if(stationDetails[1].length() != 4 || !stationDetails[1].matches("[A-Za-z0-9]+")) {
+						throw new ImportDataException("Invalid station id: " + stationDetails[1]);
+					}
+
 					Station s = new Station(stationDetails[0], stationDetails[1], Float.parseFloat(stationDetails[2]),
 							Float.parseFloat(stationDetails[3]), Integer.parseInt(stationDetails[4]),
 							Integer.parseInt(stationDetails[6]));
 					stationList.add(s);
 
-					if (initRec) {
+					if(initRec) {
 						frontend.write(Rec.WriteRequest.newBuilder().setName("stations/" + s.getId() + "/bikes")
 								.setValue(Any.pack(Int32Value.newBuilder().setValue(Integer.parseInt(stationDetails[5]))
 										.build())).build());
@@ -149,9 +174,12 @@ public class HubMain {
 				}
 			}
 
-		} catch(IOException ie) {
+		} catch(IOException | ImportDataException e) {
 			System.err.println("Caught exception while parsing the stations file: ");
-			throw ie;
+			throw e;
+		} catch (NumberFormatException e) {
+			System.err.println("Caught exception while parsing the stations file: ");
+			throw new ImportDataException("Non numeric value: " + e.getMessage());
 		}
 	}
 

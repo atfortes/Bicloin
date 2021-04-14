@@ -6,7 +6,6 @@ import pt.tecnico.rec.grpc.Rec;
 import pt.tecnico.rec.grpc.RecordServiceGrpc;
 import pt.ulisboa.tecnico.sdis.zk.*;
 
-import java.sql.Time;
 import java.util.concurrent.TimeUnit;
 
 public class RecFrontend implements AutoCloseable {

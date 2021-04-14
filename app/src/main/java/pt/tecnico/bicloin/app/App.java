@@ -92,7 +92,7 @@ public class App {
             InfoStationResponse station = frontend.infoStation(InfoStationRequest.newBuilder().setStationId(sid).build());
             DistanceResponse distance = frontend.distance(DistanceRequest.newBuilder().setStationId(sid).setLat(lat).setLon(lon).build());
 
-            res.append(String.format("%s, lat %f, long %f, %d docas, %f BIC prémio, %d bicicletas, a %d " +
+            res.append(String.format("%s, lat %f, long %f, %d docas, %d BIC prémio, %d bicicletas, a %d " +
                             "metros\n",
                     sid, station.getLatitude(), station.getLongitude(), station.getCapacity(), station.getAward(), station.getBikes(), distance.getDistance()));
 
@@ -108,7 +108,7 @@ public class App {
                 .setStationId(name)
                 .build();
         InfoStationResponse resp = frontend.infoStation(request);
-        return String.format("%s, lat %f, long %f, %d docas, %f BIC prémio, %d bicicletas, %d levantamentos, %d devoluções, %s",
+        return String.format("%s, lat %f, long %f, %d docas, %d BIC prémio, %d bicicletas, %d levantamentos, %d devoluções, %s",
                 resp.getName(), resp.getLatitude(), resp.getLongitude(), resp.getCapacity(), resp.getAward(), resp.getBikes(),
                 resp.getPickups(), resp.getDeliveries(), String.format("https://www.google.com/maps/place/%f,%f", resp.getLatitude(), resp.getLongitude()));
     }

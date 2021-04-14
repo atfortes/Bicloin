@@ -39,9 +39,7 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
     public void balance(BalanceRequest request, StreamObserver<BalanceResponse> responseObserver) {
 
         String username = request.getUsername();
-        User user = hub.getUser(username);
-
-        if (user == null) {
+        if (!userExists(username)) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
             return;
         }
@@ -68,13 +66,12 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
     public void topUp(TopUpRequest request, StreamObserver<TopUpResponse> responseObserver) {
 
         String username = request.getUsername();
-        User user = hub.getUser(username);
-        if (user == null) {
+        if (!userExists(username)) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
             return;
         }
 
-        if (!request.getPhoneNumber().equals(user.getPhone())) {
+        if (!request.getPhoneNumber().equals(hub.getUser(username).getPhone())) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Phone number incorrect").asRuntimeException());
             return;
         }
@@ -114,24 +111,19 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
     public void bikeUp(BikeRequest request, StreamObserver<BikeResponse> responseObserver) {
 
         String username = request.getUsername();
-        User user = hub.getUser(username);
-        if (user == null) {
+        if (!userExists(username)) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
             return;
         }
 
         String stationId = request.getStationId();
-        Station station = hub.getStation(stationId);
-        if (station == null) {
+        if (!stationExists(stationId)) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
             return;
         }
 
-        float latitude = request.getLatitude();
-        float longitude = request.getLongitude();
-        if (station.haversine_distance(latitude, longitude) >= 200) {
-            BikeResponse response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.OUT_OF_RANGE).build();
-            responseObserver.onNext(response);
+        if (!validDistance(stationId, request.getLatitude(), request.getLongitude())) {
+            responseObserver.onNext(BikeResponse.newBuilder().setResponse(BikeResponse.Response.OUT_OF_RANGE).build());
             responseObserver.onCompleted();
             return;
         }
@@ -183,24 +175,19 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
     public void bikeDown(BikeRequest request, StreamObserver<BikeResponse> responseObserver) {
 
         String username = request.getUsername();
-        User user = hub.getUser(username);
-        if (user == null) {
+        if (!userExists(username)) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
             return;
         }
 
         String stationId = request.getStationId();
-        Station station = hub.getStation(stationId);
-        if (station == null) {
+        if (!stationExists(stationId)) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
             return;
         }
 
-        float latitude = request.getLatitude();
-        float longitude = request.getLongitude();
-        if (station.haversine_distance(latitude, longitude) >= 200) {
-            BikeResponse response = BikeResponse.newBuilder().setResponse(BikeResponse.Response.OUT_OF_RANGE).build();
-            responseObserver.onNext(response);
+        if (!validDistance(stationId, request.getLatitude(), request.getLongitude())) {
+            responseObserver.onNext(BikeResponse.newBuilder().setResponse(BikeResponse.Response.OUT_OF_RANGE).build());
             responseObserver.onCompleted();
             return;
         }
@@ -212,6 +199,7 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
                 return;
             }
 
+            Station station = hub.getStation(stationId);
             int stationCapacity = station.getCapacity();
             boolean userHasBike = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/bike").build()).getValue().unpack(BoolValue.class).getValue();
             int bikesInStation = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + stationId + "/bikes").build()).getValue().unpack(Int32Value.class).getValue();
@@ -249,14 +237,13 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
     @Override
     public void infoStation(InfoStationRequest request, StreamObserver<InfoStationResponse> responseObserver) {
 
-        String id = request.getStationId();
-        Station station = hub.getStation(id);
-
-        if (station == null) {
+        String stationId = request.getStationId();
+        if (!stationExists(stationId)) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
             return;
         }
 
+        Station station = hub.getStation(stationId);
         InfoStationResponse.Builder builder = InfoStationResponse.newBuilder();
         builder.setName(station.getName());
         builder.setLatitude(station.getLatitude());
@@ -267,9 +254,9 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         try {
 
             // no need to verify client cancellation, innocuous function
-            int bikes = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + id + "/bikes").build()).getValue().unpack(Int32Value.class).getValue();
-            int requests = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + id + "/requests").build()).getValue().unpack(Int32Value.class).getValue();
-            int returns = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + id + "/returns").build()).getValue().unpack(Int32Value.class).getValue();
+            int bikes = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + stationId + "/bikes").build()).getValue().unpack(Int32Value.class).getValue();
+            int requests = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + stationId + "/requests").build()).getValue().unpack(Int32Value.class).getValue();
+            int returns = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + stationId + "/returns").build()).getValue().unpack(Int32Value.class).getValue();
 
             builder.setBikes(bikes);
             builder.setPickups(requests);
@@ -385,15 +372,27 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
                 responseObserver.onNext(response);
                 responseObserver.onCompleted();
 
-            } catch (IOException ie) {
+            } catch (IOException | ImportDataException ie) {
                 System.err.println(ie.getMessage());
-                responseObserver.onError(Status.INTERNAL.withDescription("Failed to reset Rec").asRuntimeException());
+                responseObserver.onError(Status.INTERNAL.withDescription("Failed to reset the values").asRuntimeException());
             } catch (StatusRuntimeException e) {
                 System.err.println("Caught exception with description: " + e.getStatus().getDescription());
                 responseObserver.onError(Status.DEADLINE_EXCEEDED.withDescription("Rec took too long to answer").asRuntimeException());
             }
 
         }
+    }
+
+    private boolean userExists(String username) {
+        return hub.getUser(username) != null;
+    }
+
+    private boolean stationExists(String stationId) {
+        return hub.getStation(stationId) != null;
+    }
+
+    private boolean validDistance(String stationId, float latitude, float longitude) {
+        return hub.getStation(stationId).haversine_distance(latitude, longitude) < 200;
     }
 
 }
