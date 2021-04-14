@@ -1,8 +1,10 @@
 package pt.tecnico.bicloin.hub;
 
 import java.io.IOException;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
@@ -14,6 +16,7 @@ import pt.tecnico.bicloin.hub.grpc.*;
 import pt.tecnico.bicloin.hub.domain.*;
 import pt.tecnico.rec.RecFrontend;
 import pt.tecnico.rec.grpc.Rec;
+import pt.tecnico.rec.grpc.RecordServiceGrpc;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 import pt.ulisboa.tecnico.sdis.zk.ZKRecord;
 
@@ -37,6 +40,8 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
     @Override
     public void balance(BalanceRequest request, StreamObserver<BalanceResponse> responseObserver) {
+
+        LOGGER.info("Received balance");
 
         String username = request.getUsername();
         if (!userExists(username)) {
@@ -64,6 +69,8 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
     @Override
     public void topUp(TopUpRequest request, StreamObserver<TopUpResponse> responseObserver) {
+
+        LOGGER.info("Received topUp");
 
         String username = request.getUsername();
         if (!userExists(username)) {
@@ -109,6 +116,8 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
     @Override
     public void bikeUp(BikeRequest request, StreamObserver<BikeResponse> responseObserver) {
+
+        LOGGER.info("Received bikeUp");
 
         String username = request.getUsername();
         if (!userExists(username)) {
@@ -174,6 +183,8 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
     @Override
     public void bikeDown(BikeRequest request, StreamObserver<BikeResponse> responseObserver) {
 
+        LOGGER.info("Received bikeDown");
+
         String username = request.getUsername();
         if (!userExists(username)) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
@@ -237,6 +248,8 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
     @Override
     public void infoStation(InfoStationRequest request, StreamObserver<InfoStationResponse> responseObserver) {
 
+        //LOGGER.info("Received infoStation");
+
         String stationId = request.getStationId();
         if (!stationExists(stationId)) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
@@ -278,11 +291,15 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
     @Override
     public void locateStation(LocateStationRequest request, StreamObserver<LocateStationResponse> responseObserver) {
 
+        LOGGER.info("Received locateStation");
+
         int k = request.getK();
         float lat = request.getLatitude();
         float lon = request.getLongitude();
 
-        LocateStationResponse response = LocateStationResponse.newBuilder().addAllIds(hub.sort_stations(k, lat, lon)).build();
+        LocateStationResponse response = LocateStationResponse.newBuilder()
+                .addAllIds(hub.sort_stations(k, lat, lon))
+                .build();
 
         responseObserver.onNext(response);
         responseObserver.onCompleted();
@@ -291,21 +308,21 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
     @Override
     public void distance(DistanceRequest request, StreamObserver<DistanceResponse> responseObserver) {
 
+        LOGGER.info("Received distance");
+
+        if (!stationExists(request.getStationId())) {
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
+            return;
+        }
+
         float lat = request.getLat();
         float lon = request.getLon();
         Station station = hub.getStation(request.getStationId());
+        double d = station.haversine_distance(lat, lon);
+        DistanceResponse response = DistanceResponse.newBuilder().setDistance((int) d).build();
 
-        if (station == null) {
-            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
-        }
-
-        else {
-            double d = station.haversine_distance(lat, lon);
-            DistanceResponse response = DistanceResponse.newBuilder().setDistance((int) d).build();
-
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
-        }
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
 
     @Override
@@ -320,26 +337,43 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
     public void sysStatus(SysStatusRequest request, StreamObserver<SysStatusResponse> responseObserver) {
 
         try {
+            ArrayList<ZKRecord> hubPaths = new ArrayList<>(frontend.getZkNaming().listRecords("/grpc/bicloin/hub"));
+            ArrayList<ZKRecord> recPaths = new ArrayList<>(frontend.getZkNaming().listRecords("/grpc/bicloin/rec"));
             SysStatusResponse.Builder builder = SysStatusResponse.newBuilder();
-            ArrayList<ZKRecord> paths = new ArrayList<>(frontend.getZkNaming().listRecords("/grpc/bicloin/hub"));
 
-            for (ZKRecord record : paths) {
+            for (ZKRecord record : hubPaths) {
                 ManagedChannel channel = ManagedChannelBuilder.forTarget(record.getURI()).usePlaintext().build();
                 HubServiceGrpc.HubServiceBlockingStub stub = HubServiceGrpc.newBlockingStub(channel);
-                CtrlPingResponse response = stub.ctrlPing(CtrlPingRequest.newBuilder().setInput("OK").build());
-                builder.addSequence(SysStatusResponse.Reply.newBuilder()
-                                        .setPath(record.getPath())
-                                        .setStatus(response.getOutput().equals("OK") ? SysStatusResponse.Reply.Status.UP:SysStatusResponse.Reply.Status.DOWN)
-                                        .build());
-                channel.shutdownNow();
+                SysStatusResponse.Reply.Builder replyBuilder = SysStatusResponse.Reply.newBuilder();
+                replyBuilder.setPath(record.getPath());
+
+                try {
+                    CtrlPingResponse response = stub.withDeadlineAfter(1, TimeUnit.SECONDS).ctrlPing(CtrlPingRequest.newBuilder().setInput("OK").build());
+                    replyBuilder.setStatus(response.getOutput().equals("OK") ? SysStatusResponse.Reply.Status.UP:SysStatusResponse.Reply.Status.DOWN);
+                } catch (StatusRuntimeException e) {
+                    replyBuilder.setStatus(SysStatusResponse.Reply.Status.DOWN);
+                } finally {
+                    builder.addSequence(replyBuilder.build());
+                    channel.shutdown();
+                }
             }
 
-            // FIXME hardcode rec/1
-            Rec.CtrlPingResponse response = frontend.ctrlPing(Rec.CtrlPingRequest.newBuilder().setInput("OK").build());
-            builder.addSequence(SysStatusResponse.Reply.newBuilder()
-                                    .setPath("/grpc/bicloin/rec/1")
-                                    .setStatus(response.getOutput().equals("OK") ? SysStatusResponse.Reply.Status.UP : SysStatusResponse.Reply.Status.DOWN)
-                                    .build());
+            for (ZKRecord record : recPaths) {
+                ManagedChannel channel = ManagedChannelBuilder.forTarget(record.getURI()).usePlaintext().build();
+                RecordServiceGrpc.RecordServiceBlockingStub stub = RecordServiceGrpc.newBlockingStub(channel);
+                SysStatusResponse.Reply.Builder replyBuilder = SysStatusResponse.Reply.newBuilder();
+                replyBuilder.setPath(record.getPath());
+
+                try {
+                    Rec.CtrlPingResponse response = stub.withDeadlineAfter(1, TimeUnit.SECONDS).ctrlPing(Rec.CtrlPingRequest.newBuilder().setInput("OK").build());
+                    replyBuilder.setStatus(response.getOutput().equals("OK") ? SysStatusResponse.Reply.Status.UP:SysStatusResponse.Reply.Status.DOWN);
+                } catch (StatusRuntimeException e) {
+                    replyBuilder.setStatus(SysStatusResponse.Reply.Status.DOWN);
+                } finally {
+                    builder.addSequence(replyBuilder.build());
+                    channel.shutdown();
+                }
+            }
 
             responseObserver.onNext(builder.build());
             responseObserver.onCompleted();
@@ -347,40 +381,36 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         }  catch (ZKNamingException e) {
             System.out.println(e.getMessage());
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Unable to communicate with zk").asRuntimeException());
-        }  catch (StatusRuntimeException e) {
-            System.err.println("Caught exception with description: " + e.getStatus().getDescription());
-            responseObserver.onError(Status.DEADLINE_EXCEEDED.withDescription("Rec took too long to answer").asRuntimeException());
         }
 
     }
 
     @Override
     public void ctrlReset(CtrlResetRequest request, StreamObserver<CtrlResetResponse> responseObserver) {
-        String password = request.getPassword();
 
+        String password = request.getPassword();
         if (!password.equals(RESET_PASSWORD)) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Incorrect Password").asRuntimeException());
+            return;
         }
-        else {
 
-            try {
-                importUsers(frontend, true);
-                importStations(frontend, true);
+        try {
+            importUsers(frontend, true);
+            importStations(frontend, true);
 
-                CtrlResetResponse response = CtrlResetResponse.newBuilder().build();
+            CtrlResetResponse response = CtrlResetResponse.newBuilder().build();
 
-                responseObserver.onNext(response);
-                responseObserver.onCompleted();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
 
-            } catch (IOException | ImportDataException ie) {
-                System.err.println(ie.getMessage());
-                responseObserver.onError(Status.INTERNAL.withDescription("Failed to reset the values").asRuntimeException());
-            } catch (StatusRuntimeException e) {
-                System.err.println("Caught exception with description: " + e.getStatus().getDescription());
-                responseObserver.onError(Status.DEADLINE_EXCEEDED.withDescription("Rec took too long to answer").asRuntimeException());
-            }
-
+        } catch (IOException | ImportDataException ie) {
+            System.err.println(ie.getMessage());
+            responseObserver.onError(Status.INTERNAL.withDescription("Failed to reset the values").asRuntimeException());
+        } catch (StatusRuntimeException e) {
+            System.err.println("Caught exception with description: " + e.getStatus().getDescription());
+            responseObserver.onError(Status.DEADLINE_EXCEEDED.withDescription("Rec took too long to answer").asRuntimeException());
         }
+
     }
 
     private boolean userExists(String username) {

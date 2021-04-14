@@ -108,6 +108,7 @@ public class AppMain {
 				"> top-up amount\n" +
 				"> tag lat long name\n" +
 				"> move name\n" +
+				"> move lat long\n" +
 				"> at\n" +
 				"> scan n\n" +
 				"> info station-id\n" +
