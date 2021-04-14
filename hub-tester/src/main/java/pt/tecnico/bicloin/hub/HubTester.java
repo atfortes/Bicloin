@@ -26,7 +26,7 @@ public class HubTester {
 		final int zooPort = Integer.parseInt(args[1]);
 		String path = args[2];
 		try (HubFrontend frontend = new HubFrontend(zooHost, zooPort, path)){
-			CtrlPingRequest request = CtrlPingRequest.newBuilder().setInput("friend").build();
+			CtrlPingRequest request = CtrlPingRequest.newBuilder().setInput("OK").build();
 			CtrlPingResponse response = frontend.ctrlPing(request);
 			System.out.println(response.getOutput());
 

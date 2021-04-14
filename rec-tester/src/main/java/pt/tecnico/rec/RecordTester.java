@@ -29,7 +29,7 @@ public class RecordTester {
 
 		try(RecFrontend frontend = new RecFrontend(zooHost, zooPort, path)) {
 
-			Rec.CtrlPingRequest request = Rec.CtrlPingRequest.newBuilder().setInput("friend").build();
+			Rec.CtrlPingRequest request = Rec.CtrlPingRequest.newBuilder().setInput("OK").build();
 			Rec.CtrlPingResponse response = frontend.ctrlPing(request);
 			System.out.println(response.getOutput());
 

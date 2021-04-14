@@ -107,7 +107,7 @@
 					<arguments>
 						<argument>${zook.serv}</argument>
 						<argument>${zook.port}</argument>
-						<argument>${hub.path}${hub.i}</argument>
+						<argument>${hub.path}</argument>
 					</arguments>
 				</configuration>
 			</plugin>
