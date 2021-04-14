@@ -56,7 +56,6 @@ public class RecordMainImpl extends RecordServiceGrpc.RecordServiceImplBase {
             return;
         }
 
-        LOGGER.info("Write: (" + name + ", " + value + ")");
         rec.writeValue(name,value);
         LOGGER.info("Write Success");
         responseObserver.onNext(Rec.WriteResponse.newBuilder().build());
