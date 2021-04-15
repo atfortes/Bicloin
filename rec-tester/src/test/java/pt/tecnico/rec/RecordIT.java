@@ -58,36 +58,50 @@ public class RecordIT extends BaseIT {
 
 	@Test
 	public void testCtrlPingSuccess() {
-		Rec.CtrlPingRequest request = Rec.CtrlPingRequest.newBuilder().setInput(TEST_MESSAGE).build();
+		Rec.CtrlPingRequest request = Rec.CtrlPingRequest.newBuilder()
+				.setInput(TEST_MESSAGE)
+				.build();
 		Rec.CtrlPingResponse response = frontend.ctrlPing(request);
 		assertEquals(TEST_MESSAGE,response.getOutput());
 	}
 
 	@Test
 	public void testNotInitializedReadSuccess() {
-		Rec.ReadRequest request = Rec.ReadRequest.newBuilder().setName(TEST_NOT_INITIALIZED_NAME).build();
+		Rec.ReadRequest request = Rec.ReadRequest.newBuilder()
+				.setName(TEST_NOT_INITIALIZED_NAME)
+				.build();
 		Rec.ReadResponse response = frontend.read(request);
 		assertEquals(TEST_EMPTY_VALUE, response.getValue());
 	}
 
 	@Test
 	public void testReadWriteSuccess() {
-		Rec.WriteRequest requestW = Rec.WriteRequest.newBuilder().setName(TEST_NAME).setValue(TEST_VALUE).build();
+		Rec.WriteRequest requestW = Rec.WriteRequest.newBuilder()
+				.setName(TEST_NAME)
+				.setValue(TEST_VALUE)
+				.build();
 		frontend.write(requestW);
-		Rec.ReadRequest requestR = Rec.ReadRequest.newBuilder().setName(TEST_NAME).build();
+		Rec.ReadRequest requestR = Rec.ReadRequest.newBuilder()
+				.setName(TEST_NAME)
+				.build();
 		Rec.ReadResponse response = frontend.read(requestR);
 		assertEquals(TEST_VALUE, response.getValue());
 	}
 
 	@Test
 	public void testWriteFailure() {
-		Rec.WriteRequest request = Rec.WriteRequest.newBuilder().setName(INVALID_TEST_NAME).setValue(TEST_VALUE).build();
+		Rec.WriteRequest request = Rec.WriteRequest.newBuilder()
+				.setName(INVALID_TEST_NAME)
+				.setValue(TEST_VALUE)
+				.build();
 		assertThrows(StatusRuntimeException.class, () -> {frontend.write(request);});
 	}
 
 	@Test
 	public void testReadFailure() {
-		Rec.ReadRequest request = Rec.ReadRequest.newBuilder().setName(INVALID_TEST_NAME).build();
+		Rec.ReadRequest request = Rec.ReadRequest.newBuilder()
+				.setName(INVALID_TEST_NAME)
+				.build();
 		assertThrows(StatusRuntimeException.class, () -> {frontend.read(request);});
 	}
 
