@@ -46,8 +46,8 @@ message InfoStationRequest {
 
 message InfoStationResponse {
   string name = 1;
-  float latitude = 2;
-  float longitude = 3;
+  double latitude = 2;
+  double longitude = 3;
   int32 capacity = 4;
   int32 award = 5;
   int32 bikes = 6;
@@ -58,8 +58,8 @@ message InfoStationResponse {
 // locate station service
 
 message LocateStationRequest {
-  float latitude = 1;
-  float longitude = 2;
+  double latitude = 1;
+  double longitude = 2;
   int32 k = 3;
 }
 
@@ -71,8 +71,8 @@ message LocateStationResponse {
 
 message BikeRequest {
   string username = 1;
-  float latitude = 2;
-  float longitude = 3;
+  double latitude = 2;
+  double longitude = 3;
   string station_id = 4;
 }
 
@@ -120,8 +120,8 @@ message CtrlResetResponse {
 // distance service
 
 message DistanceRequest {
-  float lat = 1;
-  float lon = 2;
+  double lat = 1;
+  double lon = 2;
   string station_id = 3;
 }
 
