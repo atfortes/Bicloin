@@ -14,7 +14,7 @@ Sistemas Distribuídos 2020-2021, segundo semestre
 | 92455  | Diogo Soares       | <https://git.rnl.tecnico.ulisboa.pt/ist192455>     | <diogo.sousa.soares@tecnico.ulisboa.pt>     |
 | 92478  | Hugo Pitorro     | <https://git.rnl.tecnico.ulisboa.pt/ist192478> | <hugo.pitorro@tecnico.ulisboa.pt> |
 
-![Armando](Armando_Fortes.jpg) ![Diogo](Diogo_Soares.jpeg) ![Hugo](Hugo_Pitorro.jpg)
+<img src=Armando_Fortes.jpg height="150"> <img src=Diogo_Soares.jpeg height="150"> <img src=Hugo_Pitorro.jpg height="150">
 
 
 ## Melhorias da primeira parte
