@@ -23,7 +23,7 @@ public class HubFrontend implements AutoCloseable {
             }
         }
 
-        throw new ZKNamingException("No hub available");
+        throw new ZKNamingException("Nenhum hub disponível");
     }
 
     public boolean connectHub(String hubURI) {

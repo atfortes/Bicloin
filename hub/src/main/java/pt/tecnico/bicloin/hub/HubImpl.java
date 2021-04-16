@@ -1,7 +1,6 @@
 package pt.tecnico.bicloin.hub;
 
 import java.io.IOException;
-import java.sql.Time;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -45,7 +44,7 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
         String username = request.getUsername();
         if (!userExists(username)) {
-            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("ERRO utlizador não encontrado").asRuntimeException());
             return;
         }
 
@@ -74,18 +73,18 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
         String username = request.getUsername();
         if (!userExists(username)) {
-            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("ERRO utilizador não encontrado").asRuntimeException());
             return;
         }
 
         if (!request.getPhoneNumber().equals(hub.getUser(username).getPhone())) {
-            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Phone number incorrect").asRuntimeException());
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("ERRO número de telemóvel incorreto").asRuntimeException());
             return;
         }
 
         int amount = request.getAmount();
         if (!(1 <= amount && amount <= 20)) {
-            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Amount not in 1-20 interval").asRuntimeException());
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("ERRO quantia fora do intervalo 1-20").asRuntimeException());
             return;
         }
 
@@ -121,13 +120,13 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
         String username = request.getUsername();
         if (!userExists(username)) {
-            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("ERRO utilizador não encontrado").asRuntimeException());
             return;
         }
 
         String stationId = request.getStationId();
         if (!stationExists(stationId)) {
-            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("ERRO estação desconhecida").asRuntimeException());
             return;
         }
 
@@ -248,7 +247,7 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
     @Override
     public void infoStation(InfoStationRequest request, StreamObserver<InfoStationResponse> responseObserver) {
 
-        //LOGGER.info("Received infoStation");
+        LOGGER.info("Received infoStation");
 
         String stationId = request.getStationId();
         if (!stationExists(stationId)) {
@@ -294,8 +293,8 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         LOGGER.info("Received locateStation");
 
         int k = request.getK();
-        float lat = request.getLatitude();
-        float lon = request.getLongitude();
+        double lat = request.getLatitude();
+        double lon = request.getLongitude();
 
         LocateStationResponse response = LocateStationResponse.newBuilder()
                 .addAllIds(hub.sort_stations(k, lat, lon))
@@ -311,12 +310,12 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         LOGGER.info("Received distance");
 
         if (!stationExists(request.getStationId())) {
-            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("ERRO estação desconhecida").asRuntimeException());
             return;
         }
 
-        float lat = request.getLat();
-        float lon = request.getLon();
+        double lat = request.getLat();
+        double lon = request.getLon();
         Station station = hub.getStation(request.getStationId());
         double d = station.haversine_distance(lat, lon);
         DistanceResponse response = DistanceResponse.newBuilder().setDistance((int) d).build();
@@ -380,7 +379,7 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
         }  catch (ZKNamingException e) {
             System.out.println(e.getMessage());
-            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Unable to communicate with zk").asRuntimeException());
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Erro a comunicar com o ZKNaming ").asRuntimeException());
         }
 
     }
@@ -421,7 +420,7 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         return hub.getStation(stationId) != null;
     }
 
-    private boolean validDistance(String stationId, float latitude, float longitude) {
+    private boolean validDistance(String stationId, double latitude, double longitude) {
         return hub.getStation(stationId).haversine_distance(latitude, longitude) < 200;
     }
 

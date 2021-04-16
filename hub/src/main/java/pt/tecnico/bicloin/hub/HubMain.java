@@ -14,7 +14,6 @@ import pt.ulisboa.tecnico.sdis.zk.*;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class HubMain {
@@ -156,8 +155,8 @@ public class HubMain {
 						throw new ImportDataException("Invalid station id: " + stationDetails[1]);
 					}
 
-					Station s = new Station(stationDetails[0], stationDetails[1], Float.parseFloat(stationDetails[2]),
-							Float.parseFloat(stationDetails[3]), Integer.parseInt(stationDetails[4]),
+					Station s = new Station(stationDetails[0], stationDetails[1], Double.parseDouble(stationDetails[2]),
+							Double.parseDouble(stationDetails[3]), Integer.parseInt(stationDetails[4]),
 							Integer.parseInt(stationDetails[6]));
 					stationList.add(s);
 

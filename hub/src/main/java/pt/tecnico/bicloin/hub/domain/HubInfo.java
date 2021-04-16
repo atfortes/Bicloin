@@ -27,7 +27,7 @@ public class HubInfo {
         for (Station s : stationList) { stations.put(s.getId(), s); }
     }
 
-    public ArrayList<String> sort_stations(int k, float lat, float lon) {
+    public ArrayList<String> sort_stations(int k, double lat, double lon) {
 
         ArrayList<Station> gather = new ArrayList<>(stations.values());
         gather.sort(Comparator.comparingDouble((Station s) -> s.haversine_distance(lat, lon)));

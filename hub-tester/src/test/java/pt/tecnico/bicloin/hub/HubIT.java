@@ -20,13 +20,13 @@ public class HubIT extends BaseIT{
 	static final String TEST_FINAL_USER_BALANCE = "100";
 	static final int TEST_USER_TOP_UP = 10;
 
-	static final float TEST_LATITUDE_1 = 3;
-	static final float TEST_LONGITUDE_1 = 3;
+	static final double TEST_LATITUDE_1 = 3;
+	static final double TEST_LONGITUDE_1 = 3;
 
 	static final String TEST_STATION_ID = "ocea";
 	static final String TEST_STATION_NAME = "Oceanário";
-	static final float TEST_STATION_LATITUDE = (float) 38.7633;
-	static final float TEST_STATION_LONGITUDE = (float) -9.0950;
+	static final double TEST_STATION_LATITUDE = 38.7633;
+	static final double TEST_STATION_LONGITUDE = -9.0950;
 	static final int TEST_STATION_CAPACITY = 20;
 	static final int TEST_STATION_PRIZE = 2;
 	static final int TEST_STATION_NUMBER_OF_BIKES = 15;
@@ -37,12 +37,12 @@ public class HubIT extends BaseIT{
 	static final String TEST_STATION_ID_3 = "gulb";
 
 	static final String TEST_STATION_NO_BIKES_ID = "cate";
-	static final float TEST_STATION_NO_BIKES_LATITUDE = (float) 38.7097;
-	static final float TEST_STATION_NO_BIKES_LONGITUDE = (float) -9.1336;
+	static final double TEST_STATION_NO_BIKES_LATITUDE = 38.7097;
+	static final double TEST_STATION_NO_BIKES_LONGITUDE = -9.1336;
 
 	static final String TEST_STATION_FULL_ID = "gulb";
-	static final float TEST_STATION_FULL_LATITUDE = (float) 38.7376;
-	static final float TEST_STATION_FULL_LONGITUDE = (float) -9.1545;
+	static final double TEST_STATION_FULL_LATITUDE = 38.7376;
+	static final double TEST_STATION_FULL_LONGITUDE = -9.1545;
 
 	static final String TEST_MESSAGE = "TEST";
 
@@ -344,7 +344,7 @@ public class HubIT extends BaseIT{
 	public void testSysStatusSuccess() {
 		SysStatusRequest request = SysStatusRequest.newBuilder().build();
 		SysStatusResponse response = frontend.sysStatus(request);
-		assertFalse(response.getSequenceList() == null);
+		assertNotEquals(0, response.getSequenceList().size());
 	}
 
 }

@@ -7,14 +7,14 @@ import java.util.HashMap;
 
 public class App {
 
-    private float lat;
-    private float lon;
+    private double lat;
+    private double lon;
     private final String id;
     private final String phone;
-    private final HashMap<String, ArrayList<Float>> tags;
+    private final HashMap<String, ArrayList<Double>> tags;
     private final HubFrontend frontend;
 
-    public App(float lat, float lon, String id, String phone, HubFrontend frontend) {
+    public App(double lat, double lon, String id, String phone, HubFrontend frontend) {
         this.lat = lat;
         this.lon = lon;
         this.id = id;
@@ -45,9 +45,9 @@ public class App {
         return String.format("%s %d BIC", id, resp.getBalance());
     }
 
-    public String tag(float lat, float lon, String name) {
+    public String tag(double lat, double lon, String name) {
 
-        ArrayList<Float> place = new ArrayList<>();
+        ArrayList<Double> place = new ArrayList<>();
         place.add(lat);
         place.add(lon);
         tags.put(name, place);
@@ -55,7 +55,7 @@ public class App {
     }
 
     public String move(String name) throws BicloinAppException {
-        ArrayList<Float> place = tags.get(name);
+        ArrayList<Double> place = tags.get(name);
 
         if (place == null) {
             throw new BicloinAppException("ERRO tag não definida");
@@ -66,7 +66,7 @@ public class App {
         return at();
     }
 
-    public String move(float lat, float lon) {
+    public String move(double lat, double lon) {
         this.lat = lat;
         this.lon = lon;
         return at();
@@ -76,7 +76,11 @@ public class App {
         return String.format("%s em https://www.google.com/maps/place/%f,%f", id, lat, lon);
     }
 
-    public String scan(int n) {
+    public String scan(int n) throws BicloinAppException {
+
+        if (n < 1) {
+            throw new BicloinAppException("ERRO número de estações inválido");
+        }
 
         LocateStationRequest request = LocateStationRequest.newBuilder()
                 .setLatitude(lat)
@@ -169,7 +173,7 @@ public class App {
                 .setInput("hello")
                 .build();
         CtrlPingResponse resp = frontend.ctrlPing(request);
-        return "received: " + resp.getOutput();
+        return "Recebido: " + resp.getOutput();
     }
 
     public String sys_status() {
@@ -178,7 +182,7 @@ public class App {
 
         for (int i = 0; i < resp.getSequenceCount(); i++) {
             SysStatusResponse.Reply reply = resp.getSequence(i);
-            res.append(String.format("Contacted %s with status: %s\n", reply.getPath(), reply.getStatus()));
+            res.append(String.format("Server %s contactado com estado: %s\n", reply.getPath(), reply.getStatus()));
         }
 
         return res.deleteCharAt(res.length()-1).toString();

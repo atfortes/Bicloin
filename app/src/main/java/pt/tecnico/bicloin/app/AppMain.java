@@ -18,8 +18,8 @@ public class AppMain {
 
 		// Check arguments
 		if (args.length != 6) {
-			System.err.println("ERROR incorrect number of arguments.");
-			System.err.printf("Usage: java %s zk_ip zk_port uid phone lat long%n", AppMain.class.getName());
+			System.err.println("ERRO número incorreto de argumento");
+			System.err.printf("Utilização: java %s zk_ip zk_port uid phone lat long%n", AppMain.class.getName());
 			return;
 		}
 
@@ -27,8 +27,8 @@ public class AppMain {
 		final String zooKeeperPort = args[1];
 		final String uid = args[2];
 		final String phone = args[3];
-		final float lat = Float.parseFloat(args[4]);
-		final float lon = Float.parseFloat(args[5]);
+		final double lat = Double.parseDouble(args[4]);
+		final double lon = Double.parseDouble(args[5]);
 
 		try (HubFrontend frontend = new HubFrontend(zooKeeperServ, Integer.parseInt(zooKeeperPort), "/grpc/bicloin/hub")) {
 
@@ -45,10 +45,9 @@ public class AppMain {
 
 		} catch (ZKNamingException e) {
 			System.err.println(e.getMessage());
-			System.err.println("Exception reaching hub, shutting down");
+			System.err.println("Erro a alcançar o hub, a desligar...");
 		} catch (NumberFormatException e) {
-			System.err.println(e.getMessage());
-			System.err.println("Incorrect arguments");
+			System.err.println("Argumentos incorretos");
 		}
 	}
 
@@ -61,11 +60,11 @@ public class AppMain {
 			} else if (content.length == 2 && content[0].equals("top-up")) {
 				System.out.println(app.topUp(Integer.parseInt(content[1])));
 			} else if (content.length == 4 && content[0].equals("tag")) {
-				System.out.println(app.tag(Float.parseFloat(content[1]), Float.parseFloat(content[2]), content[3]));
+				System.out.println(app.tag(Double.parseDouble(content[1]), Double.parseDouble(content[2]), content[3]));
 			} else if (content.length == 2 && content[0].equals("move")) {
 				System.out.println(app.move(content[1]));
 			} else if (content.length == 3 && content[0].equals("move")) {
-				System.out.println(app.move(Float.parseFloat(content[1]), Float.parseFloat(content[2])));
+				System.out.println(app.move(Double.parseDouble(content[1]), Double.parseDouble(content[2])));
 			} else if (content.length == 1 && content[0].equals("at")) {
 				System.out.println(app.at());
 			} else if (content.length == 2 && content[0].equals("scan")) {
@@ -83,27 +82,27 @@ public class AppMain {
 			} else if (content.length == 1 && content[0].equals("help")) {
 				System.out.println(help());
 			} else if (content.length == 2 && content[0].equals("zzz")) {
-				System.out.printf("sleeping for %s ms%n", content[1]);
+				System.out.printf("A dormir por %s ms%n", content[1]);
 				Thread.sleep(Integer.parseInt(content[1]));
-			} else if (content.length > 0 && content[0].charAt(0) == '#') {
+			} else if (content.length > 0 && content[0].equals("") || content[0].charAt(0) == '#') {
 				// skip comments and empty lines
 				assert true;
-			} else System.out.println("incorrect usage, try the command help");
+			} else System.out.println("Utilização incorreta, utilize o comando help para mais detalhes");
 
 
 		} catch (NumberFormatException e) {
-			System.out.println("Incorrect usage, try the command help");
+			System.out.println("Utilização incorreta, utilize o comando help para mais detalhes");
 		} catch (StatusRuntimeException e) {
 			System.out.println(e.getStatus().getDescription());
 		} catch (BicloinAppException e) {
 			System.out.println(e.getMessage());
 		} catch (Exception e) {
-			System.out.println("Unexpected exception");
+			System.out.println("Exceção inesperada");
 		}
 	}
 
 	private static String help() {
-		return "Application usage:\n" +
+		return "Utilização da aplicação:\n" +
 				"> balance\n" +
 				"> top-up amount\n" +
 				"> tag lat long name\n" +
