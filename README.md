@@ -7,15 +7,11 @@ Distributed Systems 2020-2021, 2nd semester project
 
 **Group A43**
 
-*(fill-in line above with group identifier e.g. A07 or T22; and then delete this line)*
+Hugo Pitorro [92478](mailto:hugo.pitorro@tecnico.ulisboa.pt)
 
-... [...](mailto:...@tecnico.ulisboa.pt)
+Diogo Soares [92455](mailto:diogo.sousa.soares@tecnico.ulisboa.pt)
 
-... [...](mailto:...@tecnico.ulisboa.pt)
-
-... [...](mailto:...@tecnico.ulisboa.pt)
-
-*(fill-in lines above with student number, name, and email; and then delete this line)*
+Armando Fortes [92428](mailto:armando.teles.fortes@tecnico.ulisboa.pt)
 
 ### Module leaders
 
@@ -24,7 +20,7 @@ The leads should be evenly divided among the group members.
 
 ### Code identification
 
-In all the source files (including POMs), please replace __A43__ with your group identifier.  
+In all the source files (including POMs), please replace __CXX__ with your group identifier.  
 The group identifier is composed by Campus - A (Alameda) or T (Tagus) - and number - always with two digits.
 
 This change is important for code dependency management, to make sure that your code runs using the correct components and not someone else's.
