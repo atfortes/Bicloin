@@ -1,26 +1,23 @@
 # Tester
 
 
+# Server
+
+
 ## Authors
 
 Group A43
 
-*(fill-in line above with group identifier e.g. A07 or T22; and then delete this line)*
 
 ### Lead developer 
 
-... ... ...
-
-*(fill-in line above with student number, name, and @GitHub identity of module leader; and then delete this line)*
+Diogo Soares, 92455,  https://git.rnl.tecnico.ulisboa.pt/ist192455
 
 ### Contributors
 
-... ... ...
+Armando Fortes, 92428,  https://git.rnl.tecnico.ulisboa.pt/ist192428
 
-... ... ...
-
-*(fill-in lines above with student number, name, and @GitHub identity of module contributors; and then delete this line)*
-
+Hugo Pitorro, 92478,  https://git.rnl.tecnico.ulisboa.pt/ist192478
 
 ## About
 
@@ -35,7 +32,7 @@ You must start the servers first.
 To compile and run integration tests:
 
 ```
-mvn verify
+mvn integration-test
 ```
 
 

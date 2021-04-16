@@ -61,6 +61,8 @@ $ mvn compile exec:java
 
 Este comando vai colocar o *hub* no endereço *localhost* e na porta *8081*.
 
+**Nota:** ficheiros stations.csv e users.csv têm de estar na diretoria *hub*.
+
 Para confirmar o funcionamento do servidor com um *ping*, fazer:
 
 ```sh
@@ -200,15 +202,16 @@ Entregar uma bicicleta com uma estação inválida:
 Ping do hub:
 
     > ping
-    received: hello
+    Recebido: hello
 
 ### 2.8 *sys_status*
 
 Ver servidores ativos:
 
     > sys_status 
-    Contacted /grpc/bicloin/hub/1 with status: UP
-    Contacted /grpc/bicloin/rec/1 with status: UP
+    Server /grpc/bicloin/hub/1 contactado com estado: UP
+    Server /grpc/bicloin/rec/1 contactado com estado: UP
+
 
 ----
 
