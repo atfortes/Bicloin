@@ -103,12 +103,27 @@ Consultar o saldo de *bicloins*:
     > balance
     alice 0 BIC
 
+Consultar o saldo de um utilizador desconhecido:
+
+    > balance
+    ERRO utilizador não encontrado
+
 ### 2.2 *top-up*
 
 Carregar 15 Euros em *bicloins*:
 
     > top-up 15
     alice 150 BIC
+
+Carregar 15 Euros com um utilizador desconhecido:
+
+    > top-up 15
+    ERRO utilizador não encontrado
+
+Carregar 15 Euros com o numero de telemóvel errado:
+
+    > top-up 15
+    ERRO número de telemóvel incorreto
 
 Carregar 30 Euros em *bicloins*:
 
@@ -128,15 +143,19 @@ Listagem da informação de uma estação desconhecida:
     > info sdis
     ERRO estação desconhecida
 
-
 ### 2.4 *locate_station*
 
-Localizar uma estação:
+Localizar 3 estações:
     
     > scan 3
     istt, lat 38,737202, long -9,302300, 20 docas, 4 BIC prémio, 12 bicicletas, a 218 metros
     stao, lat 38,686699, long -9,312400, 30 docas, 3 BIC prémio, 20 bicicletas, a 5804 metros
     jero, lat 38,697201, long -9,206400, 30 docas, 3 BIC prémio, 20 bicicletas, a 9301 metros
+
+Localizar um número inválido de estações:
+
+    > scan -1
+    ERRO número de estações inválido
 
 ### 2.5 *bike_up*
 
@@ -144,6 +163,16 @@ Levantar uma bicicleta:
 
     > bike-up ocea
     OK
+
+Levantar uma bicicleta com um utilizador desconhecido:
+
+    > bike-up ocea
+    ERRO utilizador não encontrado
+
+Levantar uma bicicleta numa estação desconhecida:
+
+    > bike-up sdis
+    ERRO estação desconhecida
 
 Levantar uma bicicleta sem dinheiro:
 
@@ -176,6 +205,16 @@ Entregar uma bicicleta:
 
     > bike-down cate
     OK
+
+Entregar uma bicicleta com um utilizador desconhecido:
+
+    > bike-down cate
+    ERRO utilizador não encontrado
+
+Entregar uma bicicleta numa estação desconhecida:
+
+    > bike-down sdis
+    ERRO estação desconhecida
 
 Entregar uma bicicleta a mais de 200 metros:
     
