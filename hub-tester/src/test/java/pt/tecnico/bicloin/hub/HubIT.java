@@ -101,8 +101,8 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
-	public void testBalanceFailure() {
-		BalanceRequest request = BalanceRequest.newBuilder().build();
+	public void testBalanceFailureWrongUsername() {
+		BalanceRequest request = BalanceRequest.newBuilder().setUsername(TEST_USER_WRONG_NAME).build();
 		assertThrows(StatusRuntimeException.class, () -> {frontend.balance(request);});
 	}
 
@@ -118,7 +118,7 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
-	public void testTopUpFailure1() {
+	public void testTopUpFailureWrongUsername() {
 		TopUpRequest request = TopUpRequest.newBuilder()
 				.setUsername(TEST_USER_WRONG_NAME)
 				.setAmount(TEST_USER_TOP_UP)
@@ -128,7 +128,7 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
-	public void testTopUpFailure2() {
+	public void testTopUpFailureInvalidAmount() {
 		TopUpRequest request = TopUpRequest.newBuilder()
 				.setUsername(TEST_USER_NAME)
 				.setAmount(TEST_USER_WRONG_TOP_UP)
@@ -138,7 +138,7 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
-	public void testTopUpFailure3() {
+	public void testTopUpFailureWrongPhone() {
 		TopUpRequest request = TopUpRequest.newBuilder()
 				.setUsername(TEST_USER_NAME)
 				.setAmount(TEST_USER_TOP_UP)
@@ -162,6 +162,17 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
+	public void testLocateStationFailureInvalidK() {
+		int k = -1;
+		LocateStationRequest request = LocateStationRequest.newBuilder()
+				.setLatitude(TEST_STATION_LATITUDE)
+				.setLongitude(TEST_STATION_LONGITUDE)
+				.setK(k)
+				.build();
+		assertThrows(StatusRuntimeException.class, () -> {frontend.locateStation(request);});
+	}
+
+	@Test
 	public void testInfoStationSuccess() {
 		InfoStationRequest request = InfoStationRequest.newBuilder().setStationId(TEST_STATION_ID).build();
 		InfoStationResponse response = frontend.infoStation(request);
@@ -176,7 +187,7 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
-	public void testInfoStationFailure() {
+	public void testInfoStationFailureWrongStationId() {
 		InfoStationRequest request = InfoStationRequest.newBuilder().setStationId(TEST_STATION_WRONG_ID).build();
 		assertThrows(StatusRuntimeException.class, () -> {frontend.infoStation(request);});
 	}
@@ -195,7 +206,7 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
-	public void testBikeUpFailure1() {
+	public void testBikeUpFailureWrongUsername() {
 		BikeRequest request = BikeRequest.newBuilder()
 				.setUsername(TEST_USER_WRONG_NAME)
 				.setLatitude(TEST_STATION_LATITUDE)
@@ -206,7 +217,7 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
-	public void testBikeUpFailure2() {
+	public void testBikeUpFailureWrongStationId() {
 		BikeRequest request = BikeRequest.newBuilder()
 				.setUsername(TEST_USER_NAME)
 				.setLatitude(TEST_STATION_LATITUDE)
@@ -217,7 +228,7 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
-	public void testBikeUpFailure3() {
+	public void testBikeUpFailureFailureOutOfRange() {
 		testTopUpSuccess();
 		BikeRequest request = BikeRequest.newBuilder()
 				.setUsername(TEST_USER_NAME)
@@ -230,7 +241,7 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
-	public void testBikeUpFailure4() {
+	public void testBikeUpFailureOutOfMoney() {
 		BikeRequest bikeUpRequest = BikeRequest.newBuilder()
 				.setUsername(TEST_USER_NAME)
 				.setLatitude(TEST_STATION_LATITUDE)
@@ -242,7 +253,7 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
-	public void testBikeUpFailure5() {
+	public void testBikeUpFailureAlreadyHasBike() {
 		testBikeUpSuccess();
 		BikeRequest request = BikeRequest.newBuilder()
 				.setUsername(TEST_USER_NAME)
@@ -255,7 +266,7 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
-	public void testBikeUpFailure6() {
+	public void testBikeUpFailureNoBikesInStation() {
 		testTopUpSuccess();
 		BikeRequest request = BikeRequest.newBuilder()
 				.setUsername(TEST_USER_NAME)
@@ -281,7 +292,7 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
-	public void testBikeDownFailure1() {
+	public void testBikeDownFailureWrongUsername() {
 		BikeRequest request = BikeRequest.newBuilder()
 				.setUsername(TEST_USER_WRONG_NAME)
 				.setLatitude(TEST_LATITUDE_1)
@@ -292,7 +303,7 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
-	public void testBikeDownFailure2() {
+	public void testBikeDownFailureWrongStationId() {
 		BikeRequest request = BikeRequest.newBuilder()
 				.setUsername(TEST_USER_NAME)
 				.setLatitude(TEST_LATITUDE_1)
@@ -303,7 +314,7 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
-	public void testBikeDownFailure3() {
+	public void testBikeDownFailureOutOfRange() {
 		testBikeUpSuccess();
 		BikeRequest request = BikeRequest.newBuilder()
 				.setUsername(TEST_USER_NAME)
@@ -316,7 +327,7 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
-	public void testBikeDownFailure4() {
+	public void testBikeDownFailureNoBikeRequested() {
 		BikeRequest request = BikeRequest.newBuilder()
 				.setUsername(TEST_USER_NAME)
 				.setLatitude(TEST_STATION_LATITUDE)
@@ -328,7 +339,7 @@ public class HubIT extends BaseIT{
 	}
 
 	@Test
-	public void testBikeDownFailure5() {
+	public void testBikeDownFailureStationIsFull() {
 		testBikeUpSuccess();
 		BikeRequest request = BikeRequest.newBuilder()
 				.setUsername(TEST_USER_NAME)

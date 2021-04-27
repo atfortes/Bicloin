@@ -2,7 +2,9 @@ package pt.tecnico.bicloin.hub;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import com.google.protobuf.Any;
@@ -26,6 +28,7 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
     private static final Logger LOGGER = Logger.getLogger(HubImpl.class.getName());
 
+    private KeyLock<String> keyLock = new KeyLock<>();
     private final int EURO2BIC = 10;
     private final String RESET_PASSWORD = "super_strong_reset_password";
     private final HubInfo hub = new HubInfo();
@@ -44,11 +47,13 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
         String username = request.getUsername();
         if (!userExists(username)) {
-            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("ERRO utlizador não encontrado").asRuntimeException());
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("ERRO utilizador não encontrado").asRuntimeException());
             return;
         }
 
         try {
+
+            keyLock.lock(username);
 
             Rec.ReadResponse res = frontend.read(Rec.ReadRequest.newBuilder().setName("users/" + username + "/balance").build());
             Int32Value balance = res.getValue().unpack(Int32Value.class);
@@ -63,6 +68,12 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         } catch (InvalidProtocolBufferException e) {
             System.err.println("Caught exception when transferring data between hub and rec: " + e);
             responseObserver.onError(Status.DATA_LOSS.withDescription("Failure transferring data between hub and rec").asRuntimeException());
+        } catch (InterruptedException e) {
+            System.err.println("Caught exception while locking key: " + e.getMessage());
+            responseObserver.onError(Status.INTERNAL.withDescription("Thread interrupted.").asRuntimeException());
+            Thread.currentThread().interrupt();
+        } finally {
+            keyLock.unlock(username);
         }
     }
 
@@ -90,6 +101,8 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
         try {
 
+            keyLock.lock(username);
+
             if (Context.current().isCancelled()) {
                 responseObserver.onError(Status.CANCELLED.withDescription("Cancelled by client").asRuntimeException());
                 return;
@@ -110,6 +123,12 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         } catch (InvalidProtocolBufferException e) {
             System.err.println("Caught exception when transferring data between hub and rec: " + e);
             responseObserver.onError(Status.DATA_LOSS.withDescription("Failure transferring data between hub and rec").asRuntimeException());
+        } catch (InterruptedException e) {
+            System.err.println("Caught exception while locking key: " + e.getMessage());
+            responseObserver.onError(Status.INTERNAL.withDescription("Thread interrupted.").asRuntimeException());
+            Thread.currentThread().interrupt();
+        } finally {
+            keyLock.unlock(username);
         }
     }
 
@@ -137,6 +156,9 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         }
 
         try {
+
+            keyLock.lock(username);
+            keyLock.lock(stationId);
 
             if (Context.current().isCancelled()) {
                 responseObserver.onError(Status.CANCELLED.withDescription("Cancelled by client").asRuntimeException());
@@ -176,6 +198,13 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         } catch (InvalidProtocolBufferException e) {
             System.err.println("Caught exception when transferring data between hub and rec: " + e);
             responseObserver.onError(Status.DATA_LOSS.withDescription("Failure transferring data between hub and rec").asRuntimeException());
+        } catch (InterruptedException e) {
+            System.err.println("Caught exception while locking key: " + e.getMessage());
+            responseObserver.onError(Status.INTERNAL.withDescription("Thread interrupted.").asRuntimeException());
+            Thread.currentThread().interrupt();
+        } finally {
+            keyLock.unlock(username);
+            keyLock.unlock(stationId);
         }
     }
 
@@ -186,13 +215,13 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
         String username = request.getUsername();
         if (!userExists(username)) {
-            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User not found").asRuntimeException());
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("ERRO utilizador não encontrado").asRuntimeException());
             return;
         }
 
         String stationId = request.getStationId();
         if (!stationExists(stationId)) {
-            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("ERRO estação desconhecida").asRuntimeException());
             return;
         }
 
@@ -203,6 +232,9 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         }
 
         try {
+
+            keyLock.lock(username);
+            keyLock.lock(stationId);
 
             if (Context.current().isCancelled()) {
                 responseObserver.onError(Status.CANCELLED.withDescription("Cancelled by client").asRuntimeException());
@@ -241,6 +273,13 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         } catch (InvalidProtocolBufferException e) {
             System.err.println("Caught exception when transferring data between hub and rec: " + e);
             responseObserver.onError(Status.DATA_LOSS.withDescription("Failure transferring data between hub and rec").asRuntimeException());
+        } catch (InterruptedException e) {
+            System.err.println("Caught exception while locking key: " + e.getMessage());
+            responseObserver.onError(Status.INTERNAL.withDescription("Thread interrupted.").asRuntimeException());
+            Thread.currentThread().interrupt();
+        } finally {
+            keyLock.unlock(username);
+            keyLock.unlock(stationId);
         }
     }
 
@@ -251,7 +290,7 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
         String stationId = request.getStationId();
         if (!stationExists(stationId)) {
-            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Station not found").asRuntimeException());
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("ERRO estação desconhecida").asRuntimeException());
             return;
         }
 
@@ -264,6 +303,8 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         builder.setAward(station.getAward());
 
         try {
+
+            keyLock.lock(stationId);
 
             // no need to verify client cancellation, innocuous function
             int bikes = frontend.read(Rec.ReadRequest.newBuilder().setName("stations/" + stationId + "/bikes").build()).getValue().unpack(Int32Value.class).getValue();
@@ -284,6 +325,12 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         } catch (InvalidProtocolBufferException e) {
             System.err.println("Caught exception when transferring data between hub and rec: " + e);
             responseObserver.onError(Status.DATA_LOSS.withDescription("Failure transferring data between hub and rec").asRuntimeException());
+        } catch (InterruptedException e) {
+            System.err.println("Caught exception while locking key: " + e.getMessage());
+            responseObserver.onError(Status.INTERNAL.withDescription("Thread interrupted.").asRuntimeException());
+            Thread.currentThread().interrupt();
+        } finally {
+            keyLock.unlock(stationId);
         }
     }
 
@@ -293,6 +340,10 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
         LOGGER.info("Received locateStation");
 
         int k = request.getK();
+        if (k < 1) {
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("ERRO número de estações inválido").asRuntimeException());
+            return;
+        }
         double lat = request.getLatitude();
         double lon = request.getLongitude();
 
@@ -422,6 +473,29 @@ public class HubImpl extends HubServiceGrpc.HubServiceImplBase {
 
     private boolean validDistance(String stationId, double latitude, double longitude) {
         return hub.getStation(stationId).haversine_distance(latitude, longitude) < 200;
+    }
+
+    public static class KeyLock<K> {
+
+        private final Set<K> lockedKeys = new HashSet<>();
+
+        public void lock(K key) throws InterruptedException {
+            synchronized (lockedKeys) {
+                while (!lockedKeys.add(key)) {
+                    lockedKeys.wait();
+                }
+            }
+        }
+
+        public void unlock(K key) {
+            synchronized (lockedKeys) {
+                if (lockedKeys.contains(key)) {
+                    lockedKeys.remove(key);
+                    lockedKeys.notifyAll();
+                }
+            }
+        }
+
     }
 
 }
