@@ -1,4 +1,4 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" 
+<project xmlns="http://maven.apache.org/POM/4.0.0"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
@@ -21,7 +21,7 @@
 
 		<zook.serv>localhost</zook.serv>
 		<zook.port>2181</zook.port>
-		<rec.path>/grpc/bicloin/rec/</rec.path>
+		<rec.path>/grpc/bicloin/rec</rec.path>
 		<rec.i>1</rec.i><!-- instance number -->
 	</properties>
 
@@ -107,7 +107,7 @@
 					<arguments>
 						<argument>${zook.serv}</argument>
 						<argument>${zook.port}</argument>
-						<argument>${rec.path}${rec.i}</argument>
+						<argument>${rec.path}</argument>
 					</arguments>
 				</configuration>
 			</plugin>

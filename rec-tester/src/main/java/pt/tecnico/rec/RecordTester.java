@@ -1,6 +1,10 @@
 package pt.tecnico.rec;
 
 
+import com.google.protobuf.Any;
+import com.google.protobuf.BoolValue;
+import com.google.protobuf.Int32Value;
+import com.google.protobuf.StringValue;
 import io.grpc.StatusRuntimeException;
 import pt.tecnico.rec.grpc.Rec;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
@@ -29,9 +33,14 @@ public class RecordTester {
 
 		try(RecFrontend frontend = new RecFrontend(zooHost, zooPort, path)) {
 
-			Rec.CtrlPingRequest request = Rec.CtrlPingRequest.newBuilder().setInput("OK").build();
-			Rec.CtrlPingResponse response = frontend.ctrlPing(request);
-			System.out.println(response.getOutput());
+			Rec.WriteRequest writeRequest = Rec.WriteRequest.newBuilder().setName("MYLITTLETEST").setValue(Any.pack(Int32Value.newBuilder().setValue(2).build())).build();
+			Rec.WriteResponse writeResponse = frontend.write(writeRequest);
+
+			Rec.ReadRequest request = Rec.ReadRequest.newBuilder().setName("MYLITTLETEST").build();
+			Rec.ReadResponse response = frontend.read(request);
+
+			try{System.out.println(response.getValue().unpack(Int32Value.class).getValue());}
+			catch (Exception e){System.out.println(e);}
 
 		} catch (ZKNamingException e) {
 			System.err.println("Caught exception when searching for Rec: " + e);

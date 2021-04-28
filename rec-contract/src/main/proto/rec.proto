@@ -14,13 +14,17 @@ message ReadRequest {
 
 message ReadResponse {
   google.protobuf.Any value = 1;
+  int32 seq = 2;
+  int32 cid = 3;
 }
 
 //write service
 
 message WriteRequest {
   string name = 1;
-  google.protobuf.Any value = 2;
+  int32 seq = 2;
+  int32 cid = 3;
+  google.protobuf.Any value = 4;
 }
 
 message WriteResponse {

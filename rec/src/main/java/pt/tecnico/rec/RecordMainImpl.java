@@ -7,6 +7,7 @@ import com.google.protobuf.Any;
 import io.grpc.Context;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
+import pt.tecnico.rec.domain.RecObject;
 import pt.tecnico.rec.domain.RecordInfo;
 import pt.tecnico.rec.grpc.Rec;
 import pt.tecnico.rec.grpc.RecordServiceGrpc;
@@ -32,11 +33,16 @@ public class RecordMainImpl extends RecordServiceGrpc.RecordServiceImplBase {
         }
 
         LOGGER.info("Read: " + name);
-        Any value = rec.getValue(name);
+        RecObject object = rec.getValue(name);
         var builder = Rec.ReadResponse.newBuilder();
+        Any value = object.getValue();
+        int seq = object.getSeq();
+        int cid = object.getCid();
 
-        if (value == null) { responseObserver.onNext(builder.build());}
-        else { responseObserver.onNext(builder.setValue(value).build());}
+        if (value == null) { responseObserver.onNext(builder.setSeq(seq).setCid(cid).build());}
+        else {
+            responseObserver.onNext(builder.setSeq(seq).setCid(cid).setValue(value).build());
+        }
 
         responseObserver.onCompleted();
     }
@@ -49,14 +55,24 @@ public class RecordMainImpl extends RecordServiceGrpc.RecordServiceImplBase {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Name not valid").asRuntimeException());
             return;
         }
+        int seq = request.getSeq();
+        int cid = request.getCid();
         Any value = request.getValue();
 
         if (Context.current().isCancelled()) {
             responseObserver.onError(Status.CANCELLED.withDescription("Cancelled by client").asRuntimeException());
             return;
         }
+        RecObject currentObject = rec.getValue(name);
+        int currentSeq = currentObject.getSeq(); // FIXME this can be improved for efficiency purposes
+        int currentCid = currentObject.getCid();
 
-        rec.writeValue(name,value);
+        if (!((seq > currentSeq) || ((seq == currentSeq) && (cid > currentCid)))){
+            responseObserver.onError(Status.CANCELLED.withDescription("Tag not valid").asRuntimeException()); // FIXME change status
+            return;
+        }
+
+        rec.writeValue(name, seq, cid, value);
         LOGGER.info("Write Success");
         responseObserver.onNext(Rec.WriteResponse.newBuilder().build());
         responseObserver.onCompleted();

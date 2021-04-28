@@ -7,18 +7,19 @@ import java.util.concurrent.ConcurrentHashMap;
 /** Domain root, where state and behavior of the server are implemented. */
 public class RecordInfo{
 
-    private ConcurrentHashMap<String, Any> values = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, RecObject> values = new ConcurrentHashMap<>();
 
-    public Any getValue(String key){
-        Any response =  values.get(key);
+    public RecObject getValue(String key){
+        RecObject response =  values.get(key);
 
         if (response == null) {
-            writeValue(key, Any.newBuilder().build());
+            writeValue(key, 1,0, Any.newBuilder().build());
+            response = values.get(key);
         }
         return response;
     }
 
-    public void writeValue(String key, Any value){
-        values.put(key,value);
+    public void writeValue(String key, int seq, int cid, Any value){
+        values.put(key,new RecObject(seq, cid, value));
     }
 }
