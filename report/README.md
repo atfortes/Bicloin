@@ -19,28 +19,45 @@ Sistemas Distribuídos 2020-2021, segundo semestre
 
 ## Melhorias da primeira parte
 
-_(que correções ou melhorias foram feitas ao código da primeira parte -- incluir link para commits no Git onde a alteração foi feita)_
+- [Corrected Hub-Tester function names](https://git.rnl.tecnico.ulisboa.pt/SD-20-21-2/A43-Bicloin/commit/dc86d06c55784d4df5d64f170c75b6f7594643d9)
 
-- [descrição da alteração](https://github.com/tecnico-distsys/CXX-Sauron/commit/156e1ac25798e2360b362b3a8fc474f7cfe64d01)
+- [Added Hub-Test for code coverage](https://git.rnl.tecnico.ulisboa.pt/SD-20-21-2/A43-Bicloin/commit/dc86d06c55784d4df5d64f170c75b6f7594643d9)
+ 
+
+- [Corrected Rec Synchronization](https://git.rnl.tecnico.ulisboa.pt/SD-20-21-2/A43-Bicloin/commit/dc86d06c55784d4df5d64f170c75b6f7594643d9)
+
+- [Added User and Station locks](https://git.rnl.tecnico.ulisboa.pt/SD-20-21-2/A43-Bicloin/commit/dc86d06c55784d4df5d64f170c75b6f7594643d9)
 
 
 ## Modelo de faltas
 
-_(que faltas são toleradas, que faltas não são toleradas)_
+O Modelo de faltas permite a existência de faltas silenciosas, ou seja cada réplica pode simplesmente parar. Este modelo não enquadra a existência de faltas bizantinas, visto que o quórum (definido semanticamente como mais de metade) não prevê a existência de falsos positivos.    
 
 
 ## Solução
 
-_(Figura da solução de tolerância a faltas)_
+<img src=Figura.jpeg>
 
-_(Breve explicação da solução, suportada pela figura anterior)_
+Para cada comando é criado um sender, que começa por enviar o comando para todos os recs, e para cada um deste cria um observer responsável por apanhar o conteúdo devolvido pelo rec. Aquando receção deste conteúdo guarda esta informação no response collector. Após recebimento de um número suficiente de recs, o response collector será responsável por comunicar as respostas à função que processa o comando no frontend. Desta forma devolvendo ao cliente o resultado do comando.
 
 
 ## Protocolo de replicação
 
-_(Explicação do protocolo)_
+Neste projeto foi utilizado um protocolo de coêrencia forte, dito isto e considerando o  Teorema CAP, este protocolo peca pela perda de Availability, por outro lado beneficia da existência de partições, bem como um regime de coêrencia forte.
 
-_(descrição das trocas de mensagens)_
+O protocolo em questão é composto por *N* réplicas, cada uma com peso <img src="https://latex.codecogs.com/png.image?\dpi{150}&space;\bg_white&space;p_{i}" title="\bg_white p_{i}" />. Para cada comando o cliente envia *N* mensagens assincronamente e após receber  *t* mensagens com peso total associado a <img src="https://latex.codecogs.com/png.image?\dpi{150}&space;\bg_white&space;>\tfrac{\sum_{}^{}&space;p_{i}}{2}" title="\bg_white >\tfrac{\sum_{}^{} p_{i}}{2}" /> , 
+conclui a execução deste comando.  
+
+
+Os clientes enviam 3 comandos distintos:
+
+`ctrl_ping` -> apenas envia uma mensagem e recebe a mesma mensagem sob o formato de string.
+
+`write` -> envia não só o identificador e o valor que deseja guardar, como também o número de versão deste valor, bem como o identificador de cliente. Recebe apenas uma confirmação.
+
+`read` -> envia o identificador e recebe o valor que se encontra guardado, bem como o número de versão deste valor e o número de cliente. 
+
+Nota: O `read` e o `ctrl_ping` podem ser comandos executados normalmente, no entanto o `write` pressupõe sempre que o read também seja efetuado, embora não seja vísivel para o utilizador, tal acontece para assegurar o uso correto do número de versão. 
 
 ## Medições de desempenho
 
