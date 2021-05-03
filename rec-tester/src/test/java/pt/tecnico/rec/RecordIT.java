@@ -30,7 +30,8 @@ public class RecordIT extends BaseIT {
 	@BeforeAll
 	public static void oneTimeSetUp(){
 		try {
-			frontend = new RecFrontend(testProps.getProperty("zook.serv"), Integer.parseInt(testProps.getProperty("zook.port")), testProps.getProperty("rec.path"));
+			frontend = new RecFrontend(testProps.getProperty("zook.serv"), Integer.parseInt(testProps.getProperty("zook.port")),
+					testProps.getProperty("rec.path"), Integer.parseInt(testProps.getProperty("c.id")));
 		}
 		catch (ZKNamingException e){
 			System.err.println("Caught exception during Zookeeper bind: " + e);

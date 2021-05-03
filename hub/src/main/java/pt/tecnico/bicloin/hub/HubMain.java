@@ -26,7 +26,7 @@ public class HubMain {
 	private static int port;
 	private static String usersFile;
 	private static String stationsFile;
-	private static final String recPath = "/grpc/bicloin/rec/1";
+	private static final String recPath = "/grpc/bicloin/rec";
 	private static List<User> userList = new ArrayList<>();
 	private static List<Station> stationList = new ArrayList<>();
 
@@ -59,7 +59,7 @@ public class HubMain {
 		stationsFile = args[6];
 		boolean initRec = args.length == 8 && args[7].equals("initRec");
 
-		try(RecFrontend frontend = new RecFrontend(zooHost, zooPort, recPath)) {
+		try(RecFrontend frontend = new RecFrontend(zooHost, zooPort, recPath, instanceNumber)) {
 
 			importUsers(frontend, initRec);
 			importStations(frontend, initRec);

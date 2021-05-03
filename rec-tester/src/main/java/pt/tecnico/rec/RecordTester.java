@@ -1,10 +1,7 @@
 package pt.tecnico.rec;
 
 
-import com.google.protobuf.Any;
-import com.google.protobuf.BoolValue;
-import com.google.protobuf.Int32Value;
-import com.google.protobuf.StringValue;
+import com.google.protobuf.*;
 import io.grpc.StatusRuntimeException;
 import pt.tecnico.rec.grpc.Rec;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
@@ -21,31 +18,33 @@ public class RecordTester {
 		}
 
 		// Check arguments
-		if (args.length != 3) {
+		if (args.length != 4) {
 			System.err.println("ERROR incorrect number of arguments.");
-			System.err.printf("Usage: java %s zooHost zooPort path %n", RecordTester.class.getName());
+			System.err.printf("Usage: java %s zooHost zooPort path cid %n", RecordTester.class.getName());
 			return;
 		}
 
 		final String zooHost = args[0];
 		final int zooPort = Integer.parseInt(args[1]);
 		final String path = args[2];
+		final int cid = Integer.parseInt(args[3]);
 
-		try(RecFrontend frontend = new RecFrontend(zooHost, zooPort, path)) {
+		try(RecFrontend frontend = new RecFrontend(zooHost, zooPort, path, cid)) {
 
-			Rec.WriteRequest writeRequest = Rec.WriteRequest.newBuilder().setName("MYLITTLETEST").setValue(Any.pack(Int32Value.newBuilder().setValue(2).build())).build();
-			Rec.WriteResponse writeResponse = frontend.write(writeRequest);
+			Rec.WriteRequest writeRequest = Rec.WriteRequest.newBuilder().setName("test").setValue(Any.pack(Int32Value.newBuilder().setValue(2).build())).build();
+			frontend.write(writeRequest);
 
-			Rec.ReadRequest request = Rec.ReadRequest.newBuilder().setName("MYLITTLETEST").build();
+			Rec.ReadRequest request = Rec.ReadRequest.newBuilder().setName("test").build();
 			Rec.ReadResponse response = frontend.read(request);
 
-			try{System.out.println(response.getValue().unpack(Int32Value.class).getValue());}
-			catch (Exception e){System.out.println(e);}
+			System.out.println(response.getValue().unpack(Int32Value.class));
 
 		} catch (ZKNamingException e) {
 			System.err.println("Caught exception when searching for Rec: " + e);
 		} catch (StatusRuntimeException e) {
 			System.err.println("Caught exception with description: " + e.getStatus().getDescription());
+		} catch (InvalidProtocolBufferException e) {
+			e.printStackTrace();
 		}
 	}
 	

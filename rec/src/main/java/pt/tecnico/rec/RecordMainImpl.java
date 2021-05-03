@@ -20,30 +20,22 @@ public class RecordMainImpl extends RecordServiceGrpc.RecordServiceImplBase {
 
     @Override
     public void read(Rec.ReadRequest request, StreamObserver<Rec.ReadResponse> responseObserver) {
-        LOGGER.info("Received Read");
         String name = request.getName();
+        LOGGER.info(String.format("Received Read: %s", name));
         if (!isNameValid(name)){
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Name not valid").asRuntimeException());
             return;
         }
 
-        if (Context.current().isCancelled()) {
-            responseObserver.onError(Status.CANCELLED.withDescription("Cancelled by client").asRuntimeException());
-            return;
-        }
-
-        LOGGER.info("Read: " + name);
         RecObject object = rec.getValue(name);
-        var builder = Rec.ReadResponse.newBuilder();
         Any value = object.getValue();
         int seq = object.getSeq();
         int cid = object.getCid();
 
-        if (value == null) { responseObserver.onNext(builder.setSeq(seq).setCid(cid).build());}
-        else {
-            responseObserver.onNext(builder.setSeq(seq).setCid(cid).setValue(value).build());
-        }
+        var replyBuilder = Rec.ReadResponse.newBuilder().setSeq(seq).setCid(cid);
+        if (value != null) { replyBuilder.setValue(value); }
 
+        responseObserver.onNext(replyBuilder.build());
         responseObserver.onCompleted();
     }
 
@@ -59,10 +51,6 @@ public class RecordMainImpl extends RecordServiceGrpc.RecordServiceImplBase {
         int cid = request.getCid();
         Any value = request.getValue();
 
-        if (Context.current().isCancelled()) {
-            responseObserver.onError(Status.CANCELLED.withDescription("Cancelled by client").asRuntimeException());
-            return;
-        }
         RecObject currentObject = rec.getValue(name);
         int currentSeq = currentObject.getSeq(); // FIXME this can be improved for efficiency purposes
         int currentCid = currentObject.getCid();

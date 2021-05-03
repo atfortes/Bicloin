@@ -8,7 +8,7 @@ public class RecObserver<R> implements StreamObserver<R> {
 
     double weight = 1;
 
-    RecObserver(ResponseCollector<R> collector, Double weight){
+    RecObserver(ResponseCollector<R> collector, Double weight) {
         this.collector = collector;
         this.weight = weight;
     }
