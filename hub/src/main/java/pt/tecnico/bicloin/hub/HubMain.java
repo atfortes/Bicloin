@@ -29,6 +29,7 @@ public class HubMain {
 	private static final String recPath = "/grpc/bicloin/rec";
 	private static List<User> userList = new ArrayList<>();
 	private static List<Station> stationList = new ArrayList<>();
+	private static RecFrontend frontend = null;
 
 	public static void main(String[] args) {
 		System.out.println(HubMain.class.getSimpleName());
@@ -59,7 +60,9 @@ public class HubMain {
 		stationsFile = args[6];
 		boolean initRec = args.length == 8 && args[7].equals("initRec");
 
-		try(RecFrontend frontend = new RecFrontend(zooHost, zooPort, recPath, instanceNumber)) {
+		try {
+
+			frontend = new RecFrontend(zooHost, zooPort, recPath, instanceNumber);
 
 			importUsers(frontend, initRec);
 			importStations(frontend, initRec);
@@ -204,13 +207,15 @@ public class HubMain {
 		zkNaming.rebind(path, host, String.valueOf(port));
 	}
 
-	// Unbind class unbinds replica from ZKNaming after interruption.
+	// Unbind class closes frontend and unbinds replica from ZKNaming after interruption.
 	static class Unbind extends Thread {
 		@Override
 		public void run() {
+			System.out.println("");
+			if (frontend != null) frontend.close();
 			if (zkNaming != null) {
 				try {
-					System.out.println("\nUnbinding " + path + " from ZooKeeper...");
+					System.out.println("Unbinding " + path + " from ZooKeeper...");
 					zkNaming.unbind(path, host, String.valueOf(port));
 				}
 				catch (ZKNamingException e) {
