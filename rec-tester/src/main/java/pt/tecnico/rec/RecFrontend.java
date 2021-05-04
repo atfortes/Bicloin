@@ -27,32 +27,45 @@ public class RecFrontend implements AutoCloseable {
     List<RecordServiceGrpc.RecordServiceStub> stubs = new ArrayList<>();
     List<Double> weights = new ArrayList<>();
     ZKNaming zk;
+    String path;
     int cid;
     double maxWeight;
-    long WAIT_TIME = 5000;
-    private ConcurrentHashMap<String, Long> stats = new ConcurrentHashMap<>();
+    long WAIT_TIME = 3000;
+    ConcurrentHashMap<String, Long> stats = new ConcurrentHashMap<>();
+    ConcurrentHashMap<String, RecordWrapper> records = new ConcurrentHashMap<>();
 
     public RecFrontend(String zooHost, int zooPort, String path, int cid) throws ZKNamingException {
 
         zk = new ZKNaming(zooHost, String.valueOf(zooPort));
-        ArrayList<ZKRecord> records = new ArrayList<>(zk.listRecords(path));
-        maxWeight = records.size();
+        setStubs(path);
 
-        for (ZKRecord record : records) {
-            ManagedChannel channel = ManagedChannelBuilder.forTarget(record.getURI()).usePlaintext().build();
-            channels.add(channel);
-            RecordServiceGrpc.RecordServiceStub stub = RecordServiceGrpc.newStub(channel);
-            stubs.add(stub);
-            weights.add(1.0);
-        }
-
+        this.path = path;
         this.cid = cid;
+    }
+
+    public void setStubs(String path) throws ZKNamingException {
+        ArrayList<ZKRecord> zkRecords = new ArrayList<>(zk.listRecords(path));
+        maxWeight = zkRecords.size();
+        for (ZKRecord zkRecord : zkRecords) {
+            if (!(records.containsKey(zkRecord.getPath()) && records.get(zkRecord.getPath()).getUri().equals(zkRecord.getURI()))) {
+                ManagedChannel channel = ManagedChannelBuilder.forTarget(zkRecord.getURI()).usePlaintext().build();
+                RecordServiceGrpc.RecordServiceStub stub = RecordServiceGrpc.newStub(channel);
+                records.put(zkRecord.getPath(), new RecordWrapper(zkRecord.getURI(), channel, stub, 1.0));
+            }
+        }
     }
 
     public Rec.CtrlPingResponse ctrlPing(Rec.CtrlPingRequest request) {
 
+        try {
+            setStubs(path);
+        }
+        catch (ZKNamingException e) {
+            throw new StatusRuntimeException(Status.INTERNAL);
+        }
+
         stats.merge(PING_COUNTER_KEY, 1L, Long::sum);
-        long start = System.currentTimeMillis();
+        long start = System.nanoTime();
 
         ResponseCollector<Rec.CtrlPingResponse> collector = new ResponseCollector<>(1);
 
@@ -67,21 +80,25 @@ public class RecFrontend implements AutoCloseable {
                     throw new StatusRuntimeException(Status.UNAVAILABLE);
                 var responses = collector.getResponses();
 
-                stats.merge(PING_TIMER_KEY, System.currentTimeMillis()-start, Long::sum);
+                stats.merge(PING_TIMER_KEY, System.nanoTime()-start, Long::sum);
                 return responses.get(0);
-            }
-
-            catch (InterruptedException e){
+            } catch (InterruptedException e){
                 throw new StatusRuntimeException(Status.INTERNAL);
             }
         }
     }
 
-
     public Rec.ReadResponse read(Rec.ReadRequest request) {
 
+        try {
+            setStubs(path);
+        }
+        catch (ZKNamingException e) {
+            throw new StatusRuntimeException(Status.INTERNAL);
+        }
+
         stats.merge(READ_COUNTER_KEY, 1L, Long::sum);
-        long start = System.currentTimeMillis();
+        long start = System.nanoTime();
 
         ResponseCollector<Rec.ReadResponse> collector = new ResponseCollector<>(maxWeight);
 
@@ -110,7 +127,7 @@ public class RecFrontend implements AutoCloseable {
                         .setSeq(response.getSeq()).setCid(response.getCid()).setValue(response.getValue()).build();
                 this.write(writeBackRequest);
 
-                stats.merge(READ_TIMER_KEY, System.currentTimeMillis()-start, Long::sum);
+                stats.merge(READ_TIMER_KEY, System.nanoTime()-start, Long::sum);
                 return response;
             }
             catch (InterruptedException e) {
@@ -119,18 +136,22 @@ public class RecFrontend implements AutoCloseable {
         }
     }
 
-
     public Rec.WriteResponse write(Rec.WriteRequest request) {
 
+        try {
+            setStubs(path);
+        }
+        catch (ZKNamingException e) {
+            throw new StatusRuntimeException(Status.INTERNAL);
+        }
+
         stats.merge(WRITE_COUNTER_KEY, 1L, Long::sum);
-        long start = System.currentTimeMillis();
+        long start = System.nanoTime();
 
-        Rec.ReadRequest tagReq = Rec.ReadRequest.newBuilder().setName(request.getName()).build();
-        Rec.ReadResponse tagResp = this.read(tagReq);
-        int oldSeq = tagResp.getSeq();
+        int seq = request.getSeq();
+        if (seq == 0) seq = this.read(Rec.ReadRequest.newBuilder().setName(request.getName()).build()).getSeq() + 1;
 
-        Rec.WriteRequest newRequest = Rec.WriteRequest.newBuilder().setName(request.getName()).setSeq(oldSeq + 1).setCid(cid).setValue(request.getValue()).build();
-
+        Rec.WriteRequest newRequest = Rec.WriteRequest.newBuilder().setName(request.getName()).setSeq(seq).setCid(cid).setValue(request.getValue()).build();
         ResponseCollector<Rec.WriteResponse> collector = new ResponseCollector<>(maxWeight);
 
         SendRequestToAll<Rec.WriteRequest, Rec.WriteResponse> sender =
@@ -148,7 +169,7 @@ public class RecFrontend implements AutoCloseable {
                 }
 
                 var responses = collector.getResponses();
-                stats.merge(WRITE_TIMER_KEY, System.currentTimeMillis()-start, Long::sum);
+                stats.merge(WRITE_TIMER_KEY, System.nanoTime()-start, Long::sum);
                 return responses.get(0);
             }
             catch (InterruptedException e) {
@@ -175,9 +196,55 @@ public class RecFrontend implements AutoCloseable {
         }
 
         public void run(){
-            for (int i=0; i<stubs.size(); i++) {
-                fn.sendRequestToStub(stubs.get(i), req, new RecObserver<>(collector, weights.get(i)));
+            for (RecordWrapper record : records.values()) {
+                fn.sendRequestToStub(record.getStub(), req, new RecObserver<>(collector, record.getWeight()));
             }
+        }
+    }
+
+    private class RecordWrapper {
+        String uri;
+        ManagedChannel channel;
+        RecordServiceGrpc.RecordServiceStub stub;
+        double weight;
+
+        RecordWrapper(String uri, ManagedChannel channel, RecordServiceGrpc.RecordServiceStub stub, double weight) {
+            this.uri = uri;
+            this.channel = channel;
+            this.stub = stub;
+            this.weight = weight;
+        }
+
+        public String getUri() {
+            return uri;
+        }
+
+        public ManagedChannel getChannel() {
+            return channel;
+        }
+
+        public RecordServiceGrpc.RecordServiceStub getStub() {
+            return stub;
+        }
+
+        public double getWeight() {
+            return weight;
+        }
+
+        public void setUri(String uri) {
+            this.uri = uri;
+        }
+
+        public void setChannel(ManagedChannel channel) {
+            this.channel = channel;
+        }
+
+        public void setStub(RecordServiceGrpc.RecordServiceStub stub) {
+            this.stub = stub;
+        }
+
+        public void setWeight(double weight) {
+            this.weight = weight;
         }
     }
 
@@ -193,19 +260,19 @@ public class RecFrontend implements AutoCloseable {
         System.out.println("Finished execution.");
         if (stats.containsKey(PING_COUNTER_KEY)) {
             long pingCount = stats.get(PING_COUNTER_KEY);
-            System.out.println("[INFO] pings: " + pingCount + ", avg_time: " + stats.get(PING_TIMER_KEY)/pingCount + "ms");
+            System.out.println("[INFO] pings: " + pingCount + ", avg_time: " + stats.get(PING_TIMER_KEY)/pingCount/1000000 + "ms");
         } else { System.out.println("[INFO] pings: 0"); }
         if (stats.containsKey(READ_COUNTER_KEY)) {
             long readCount = stats.get(READ_COUNTER_KEY);
-            System.out.println("[INFO] reads: " + readCount + ", avg_time: " + stats.get(READ_TIMER_KEY)/readCount + "ms");
+            System.out.println("[INFO] reads: " + readCount + ", avg_time: " + stats.get(READ_TIMER_KEY)/readCount/1000000 + "ms");
         } else { System.out.println("[INFO] reads: 0"); }
         if (stats.containsKey(WRITE_COUNTER_KEY)) {
             long writeCount = stats.get(WRITE_COUNTER_KEY);
-            System.out.println("[INFO] writes: " + writeCount + ", avg_time: " + stats.get(WRITE_TIMER_KEY)/writeCount + "ms");
+            System.out.println("[INFO] writes: " + writeCount + ", avg_time: " + stats.get(WRITE_TIMER_KEY)/writeCount/1000000 + "ms");
         } else { System.out.println("[INFO] writes: 0"); }
 
-        for (ManagedChannel channel : channels) {
-            channel.shutdown();
+        for (RecordWrapper record : records.values()) {
+            record.getChannel().shutdown();
         }
     }
 }

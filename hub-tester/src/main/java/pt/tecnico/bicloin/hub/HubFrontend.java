@@ -47,15 +47,15 @@ public class HubFrontend implements AutoCloseable {
     }
 
     public BikeResponse bikeUp(BikeRequest request) {
-        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).bikeUp(request);
+        return stub.withDeadlineAfter(3, TimeUnit.SECONDS).bikeUp(request);
     }
 
     public BikeResponse bikeDown(BikeRequest request) {
-        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).bikeDown(request);
+        return stub.withDeadlineAfter(3, TimeUnit.SECONDS).bikeDown(request);
     }
 
     public InfoStationResponse infoStation(InfoStationRequest request) {
-        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).infoStation(request);
+        return stub.withDeadlineAfter(2, TimeUnit.SECONDS).infoStation(request);
     }
 
     public LocateStationResponse locateStation(LocateStationRequest request) {
@@ -67,7 +67,7 @@ public class HubFrontend implements AutoCloseable {
     }
 
     public CtrlResetResponse ctrlReset(CtrlResetRequest request) {
-        return stub.withDeadlineAfter(1, TimeUnit.SECONDS).ctrlReset(request);
+        return stub.withDeadlineAfter(20, TimeUnit.SECONDS).ctrlReset(request);
     }
 
     public SysStatusResponse sysStatus(SysStatusRequest request) {

@@ -32,13 +32,6 @@ public class RecordTester {
 
 		try(RecFrontend frontend = new RecFrontend(zooHost, zooPort, path, cid)) {
 
-			Rec.WriteRequest writeRequest = Rec.WriteRequest.newBuilder().setName("test").setValue(Any.pack(Int32Value.newBuilder().setValue(2).build())).build();
-			frontend.write(writeRequest);
-			Rec.ReadRequest request = Rec.ReadRequest.newBuilder().setName("test").build();
-			Rec.ReadResponse response = frontend.read(request);
-
-			System.out.print(response.getValue().unpack(Int32Value.class));
-
 			Rec.CtrlPingRequest pingRequest = Rec.CtrlPingRequest.newBuilder().setInput("OK").build();
 			System.out.println(frontend.ctrlPing(pingRequest).getOutput());
 
@@ -49,8 +42,6 @@ public class RecordTester {
 				System.out.println("Rec not found");
 			else
 				System.err.println("Caught exception with description: " + e.getStatus().getDescription());
-		} catch (InvalidProtocolBufferException e) {
-			e.printStackTrace();
 		}
 	}
 	

@@ -54,7 +54,7 @@ public class RecordMainImpl extends RecordServiceGrpc.RecordServiceImplBase {
         int currentSeq = currentObject.getSeq(); // FIXME this can be improved for efficiency purposes
         int currentCid = currentObject.getCid();
 
-        if (!((seq > currentSeq) || ((seq == currentSeq) && (cid > currentCid)))){
+        if (!((seq > currentSeq) || ((seq == currentSeq) && (cid >= currentCid)))) {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Tag not valid").asRuntimeException());
             return;
         }
