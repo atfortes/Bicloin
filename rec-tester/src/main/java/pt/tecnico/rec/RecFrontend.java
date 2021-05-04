@@ -32,7 +32,7 @@ public class RecFrontend implements AutoCloseable {
     double maxWeight;
     long WAIT_TIME = 3000;
     ConcurrentHashMap<String, Long> stats = new ConcurrentHashMap<>();
-    ConcurrentHashMap<String, RecordWrapper> records = new ConcurrentHashMap<>();
+    ConcurrentHashMap<String, RecWrapper> records = new ConcurrentHashMap<>();
 
     public RecFrontend(String zooHost, int zooPort, String path, int cid) throws ZKNamingException {
 
@@ -50,7 +50,7 @@ public class RecFrontend implements AutoCloseable {
             if (!(records.containsKey(zkRecord.getPath()) && records.get(zkRecord.getPath()).getUri().equals(zkRecord.getURI()))) {
                 ManagedChannel channel = ManagedChannelBuilder.forTarget(zkRecord.getURI()).usePlaintext().build();
                 RecordServiceGrpc.RecordServiceStub stub = RecordServiceGrpc.newStub(channel);
-                records.put(zkRecord.getPath(), new RecordWrapper(zkRecord.getURI(), channel, stub, 1.0));
+                records.put(zkRecord.getPath(), new RecWrapper(zkRecord.getURI(), channel, stub, 1.0));
             }
         }
     }
@@ -196,19 +196,19 @@ public class RecFrontend implements AutoCloseable {
         }
 
         public void run(){
-            for (RecordWrapper record : records.values()) {
+            for (RecWrapper record : records.values()) {
                 fn.sendRequestToStub(record.getStub(), req, new RecObserver<>(collector, record.getWeight()));
             }
         }
     }
 
-    private class RecordWrapper {
+    private class RecWrapper {
         String uri;
         ManagedChannel channel;
         RecordServiceGrpc.RecordServiceStub stub;
         double weight;
 
-        RecordWrapper(String uri, ManagedChannel channel, RecordServiceGrpc.RecordServiceStub stub, double weight) {
+        RecWrapper(String uri, ManagedChannel channel, RecordServiceGrpc.RecordServiceStub stub, double weight) {
             this.uri = uri;
             this.channel = channel;
             this.stub = stub;
@@ -229,22 +229,6 @@ public class RecFrontend implements AutoCloseable {
 
         public double getWeight() {
             return weight;
-        }
-
-        public void setUri(String uri) {
-            this.uri = uri;
-        }
-
-        public void setChannel(ManagedChannel channel) {
-            this.channel = channel;
-        }
-
-        public void setStub(RecordServiceGrpc.RecordServiceStub stub) {
-            this.stub = stub;
-        }
-
-        public void setWeight(double weight) {
-            this.weight = weight;
         }
     }
 
@@ -271,7 +255,7 @@ public class RecFrontend implements AutoCloseable {
             System.out.println("[INFO] writes: " + writeCount + ", avg_time: " + stats.get(WRITE_TIMER_KEY)/writeCount/1000000 + "ms");
         } else { System.out.println("[INFO] writes: 0"); }
 
-        for (RecordWrapper record : records.values()) {
+        for (RecWrapper record : records.values()) {
             record.getChannel().shutdown();
         }
     }
