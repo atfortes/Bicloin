@@ -2,6 +2,8 @@ package pt.tecnico.rec;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import pt.tecnico.rec.grpc.Rec;
 import pt.tecnico.rec.grpc.RecordServiceGrpc;
 import pt.ulisboa.tecnico.sdis.zk.*;
@@ -47,7 +49,6 @@ public class RecFrontend implements AutoCloseable {
         this.cid = cid;
     }
 
-    // FIXME empty responses
     public Rec.CtrlPingResponse ctrlPing(Rec.CtrlPingRequest request) {
 
         stats.merge(PING_COUNTER_KEY, 1L, Long::sum);
@@ -56,26 +57,27 @@ public class RecFrontend implements AutoCloseable {
         ResponseCollector<Rec.CtrlPingResponse> collector = new ResponseCollector<>(1);
 
         SendRequestToAll<Rec.CtrlPingRequest, Rec.CtrlPingResponse> sender =
-                new SendRequestToAll<>(request, collector, ((stub, req, observer) -> stub.ctrlPing(req, observer)));
+                new SendRequestToAll<>(request, collector, (RecordServiceGrpc.RecordServiceStub::ctrlPing));
 
         synchronized(collector) {
-            sender.run();
             try {
+                sender.run();
                 collector.wait(WAIT_TIME);
+                if (!collector.quorum())
+                    throw new StatusRuntimeException(Status.UNAVAILABLE);
                 var responses = collector.getResponses();
-                if (responses.size() == 0) { return null; }
 
                 stats.merge(PING_TIMER_KEY, System.currentTimeMillis()-start, Long::sum);
                 return responses.get(0);
             }
+
             catch (InterruptedException e){
-                System.err.println("Caught exception: " + e.toString());
+                throw new StatusRuntimeException(Status.INTERNAL);
             }
         }
-        return null;
     }
 
-    // FIXME quorum accomplished verification and exception handling
+
     public Rec.ReadResponse read(Rec.ReadRequest request) {
 
         stats.merge(READ_COUNTER_KEY, 1L, Long::sum);
@@ -84,20 +86,23 @@ public class RecFrontend implements AutoCloseable {
         ResponseCollector<Rec.ReadResponse> collector = new ResponseCollector<>(maxWeight);
 
         SendRequestToAll<Rec.ReadRequest, Rec.ReadResponse> sender =
-                new SendRequestToAll<>(request, collector, ((stub, req, observer) -> stub.read(req, observer)));
+                new SendRequestToAll<>(request, collector, (RecordServiceGrpc.RecordServiceStub::read));
 
         synchronized(collector) {
-            sender.run();
             try {
+                sender.run();
                 collector.wait(WAIT_TIME);
 
-                Rec.ReadResponse response = Collections.max(collector.getResponses(), new Comparator<Rec.ReadResponse>() {
-                    @Override
-                    public int compare(Rec.ReadResponse first, Rec.ReadResponse second) {
-                        int seqComparison = Integer.compare(first.getSeq(), second.getSeq());
-                        if (seqComparison == 0) return Integer.compare(first.getCid(), second.getCid());
-                        else return seqComparison;
-                    }
+                if (collector.exceptionConsensus()) {
+                    throw new StatusRuntimeException(Status.INVALID_ARGUMENT);
+                } else if (!collector.quorum()) {
+                    throw new StatusRuntimeException(Status.UNAVAILABLE);
+                }
+
+                Rec.ReadResponse response = Collections.max(collector.getResponses(), (first, second) -> {
+                    int seqComparison = Integer.compare(first.getSeq(), second.getSeq());
+                    if (seqComparison == 0) return Integer.compare(first.getCid(), second.getCid());
+                    else return seqComparison;
                 });
 
                 // write back
@@ -108,14 +113,13 @@ public class RecFrontend implements AutoCloseable {
                 stats.merge(READ_TIMER_KEY, System.currentTimeMillis()-start, Long::sum);
                 return response;
             }
-            catch (InterruptedException e){
-                System.err.println("Caught exception: " + e.toString());
+            catch (InterruptedException e) {
+                throw new StatusRuntimeException(Status.INTERNAL);
             }
         }
-        return null;
     }
 
-    // FIXME quorum accomplished verification and exception handling
+
     public Rec.WriteResponse write(Rec.WriteRequest request) {
 
         stats.merge(WRITE_COUNTER_KEY, 1L, Long::sum);
@@ -130,23 +134,27 @@ public class RecFrontend implements AutoCloseable {
         ResponseCollector<Rec.WriteResponse> collector = new ResponseCollector<>(maxWeight);
 
         SendRequestToAll<Rec.WriteRequest, Rec.WriteResponse> sender =
-                new SendRequestToAll<>(newRequest, collector, ((stub, req, observer) -> stub.write(req,observer)));
+                new SendRequestToAll<>(newRequest, collector, (RecordServiceGrpc.RecordServiceStub::write));
 
         synchronized(collector) {
             sender.run();
             try {
                 collector.wait(WAIT_TIME);
-                var responses = collector.getResponses();
-                if (responses.size() == 0) { return null; }
 
+                if (collector.exceptionConsensus()) {
+                    throw new StatusRuntimeException(Status.INVALID_ARGUMENT);
+                } else if (!collector.quorum()) {
+                    throw new StatusRuntimeException(Status.UNAVAILABLE);
+                }
+
+                var responses = collector.getResponses();
                 stats.merge(WRITE_TIMER_KEY, System.currentTimeMillis()-start, Long::sum);
                 return responses.get(0);
             }
-            catch (InterruptedException e){
-                System.err.println("Caught exception: " + e.toString());
+            catch (InterruptedException e) {
+                throw new StatusRuntimeException(Status.INTERNAL);
             }
         }
-        return null;
     }
 
     public ZKNaming getZkNaming() {
@@ -168,7 +176,7 @@ public class RecFrontend implements AutoCloseable {
 
         public void run(){
             for (int i=0; i<stubs.size(); i++) {
-                fn.sendRequestToStub(stubs.get(i), req, new RecObserver<Resp>(collector, weights.get(i)));
+                fn.sendRequestToStub(stubs.get(i), req, new RecObserver<>(collector, weights.get(i)));
             }
         }
     }

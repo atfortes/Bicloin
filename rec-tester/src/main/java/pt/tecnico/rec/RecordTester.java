@@ -2,6 +2,7 @@ package pt.tecnico.rec;
 
 
 import com.google.protobuf.*;
+import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import pt.tecnico.rec.grpc.Rec;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
@@ -33,16 +34,21 @@ public class RecordTester {
 
 			Rec.WriteRequest writeRequest = Rec.WriteRequest.newBuilder().setName("test").setValue(Any.pack(Int32Value.newBuilder().setValue(2).build())).build();
 			frontend.write(writeRequest);
-
 			Rec.ReadRequest request = Rec.ReadRequest.newBuilder().setName("test").build();
 			Rec.ReadResponse response = frontend.read(request);
 
-			System.out.println(response.getValue().unpack(Int32Value.class));
+			System.out.print(response.getValue().unpack(Int32Value.class));
+
+			Rec.CtrlPingRequest pingRequest = Rec.CtrlPingRequest.newBuilder().setInput("OK").build();
+			System.out.println(frontend.ctrlPing(pingRequest).getOutput());
 
 		} catch (ZKNamingException e) {
 			System.err.println("Caught exception when searching for Rec: " + e);
 		} catch (StatusRuntimeException e) {
-			System.err.println("Caught exception with description: " + e.getStatus().getDescription());
+			if (e.getStatus() == Status.NOT_FOUND)
+				System.out.println("Rec not found");
+			else
+				System.err.println("Caught exception with description: " + e.getStatus().getDescription());
 		} catch (InvalidProtocolBufferException e) {
 			e.printStackTrace();
 		}

@@ -4,7 +4,6 @@ package pt.tecnico.rec;
 import java.util.logging.Logger;
 
 import com.google.protobuf.Any;
-import io.grpc.Context;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import pt.tecnico.rec.domain.RecObject;
@@ -56,7 +55,7 @@ public class RecordMainImpl extends RecordServiceGrpc.RecordServiceImplBase {
         int currentCid = currentObject.getCid();
 
         if (!((seq > currentSeq) || ((seq == currentSeq) && (cid > currentCid)))){
-            responseObserver.onError(Status.CANCELLED.withDescription("Tag not valid").asRuntimeException()); // FIXME change status
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Tag not valid").asRuntimeException());
             return;
         }
 
