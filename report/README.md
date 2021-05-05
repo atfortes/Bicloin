@@ -165,3 +165,5 @@ Outra das ponderações efetuadas no desenvolvimento do projeto foi a utilizaç�
 - Somar a cada peso a derivada parcial a multiplicar pela learning rate (valor definido manualmente) 
 
 - Aplicar o protocolo normalmente, mas com os pesos atualizados
+
+Mesmo no que toca a pesos diferenciados por rec, consideramos que não seria uma otimização interessante dadas as condições como os testes estavam a ser executados (recs definidos internamente na mesma máquina , visto que implica o  mesmo tempo de processamento e a mesma latência)
