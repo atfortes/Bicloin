@@ -44,7 +44,7 @@ A definição de resposta certa acima mencionada também teria de ser extremamen
 
 ## Solução
 
-<img src=Figura.jpeg>
+<img src=Projeto.jpeg>
 
 Para cada comando é criado um sender, que começa por enviar o comando para todos os recs, e para cada um deste cria um observer responsável por apanhar o conteúdo devolvido pelo rec. 
 
@@ -79,7 +79,7 @@ Nota: O `read` e o `ctrl_ping` podem ser comandos executados normalmente, no ent
 Procedimentos no Cliente:
 Comando | Cliente  
 --- | --- 
-`Ctrl_Ping` | Define Mensagem; Envia Pedido para todos os Servidores; Recebe Respostas Corretas até ter quórum; Escolhe a primeira 
+`Ctrl_Ping` | Define Mensagem; Envia Pedido para todos os Servidores; Recebe Respostas Corretas; Escolhe a primeira 
 `Read` | Define Identificador; Envia Pedido para todos os Servidores; Recebe Respostas Corretas até ter quórum; Escolhe a resposta com maior tag 
 `Write` | Define Identificador; Faz read; Define tag como tag do read +1; Recebe Respostas Corretas até ter quórum; Escolhe a primeira
 
