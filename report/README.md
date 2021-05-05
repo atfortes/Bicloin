@@ -102,24 +102,24 @@ Comando | Servidor
 
 ### Estado Inicial:
 
-Medição | Cliente 1 | Cliente 2 | Cliente 3 | Média
---- | --- | --- | --- | ---
-ReadTime |
-WriteTime |
-ReadFrequency |
-WriteFrequency |
-ReadWriteRatio |
+Medição | Cliente (Hub)
+--- | --- 
+ReadTime | 134 ms
+WriteTime | 91 ms
+Reads | 427
+Writes | 652
+ReadWriteRatio | 0.6549
 
 <br />
 
 ### Estado Final (após otimizações):
-Medição | Cliente 1 | Cliente 2 | Cliente 3 | Média
---- | --- | --- | --- | ---
-ReadTime |
-WriteTime |
-ReadFrequency |
-WriteFrequency |
-ReadWriteRatio |
+Medição | Cliente (Hub)
+--- | --- 
+ReadTime | 26 ms
+WriteTime | 39 ms
+Reads | 239
+Writes | 233
+ReadWriteRatio | ~1
 
 <br />
 
@@ -128,16 +128,40 @@ O tempo de read e write foi considerado como o tempo desde que o cliente faz a c
 
 As condições de teste escolhidas para as medições, consistem na execução de 3 conjuntos de instruções realizadas em paralelo por 3 clientes na app. 
 
-Os ficheiros de teste utilizados encontram-se na pasta  .
+Os ficheiros de teste utilizados encontram-se na pasta da app.
 
 As intuições associadas à variação de tempo encontram-se descritas na secção imediatamente posterior.
 
 ## Opções de implementação
 
-_(Descrição de opções de implementação, incluindo otimizações e melhorias introduzidas)_
+Na implementação do protocolo um dos nossos principais focos foi a escalibilidade e legibilidade dos mecanismos que estavam a ser codificados. 
 
-_(Justificar as otimizações com as medições efetuadas -- antes e depois)_
+Como tal, decidimos utilizar uma relação wait notify entre a thread que aguardava pelo quórum de respostas e os observadores subsequentes, esta opção permite conceptualizar o envio de múltiplas mensagem como um problema isolado, desde que a informação esteja no collector aquando o notify é executado.
+
+Outro dos nossos focos foi escalar com facilidade a criação de novos comandos, para tal foi necessário facilitar o mecanismo de envio de mensagens para todos os recs, embora aparentemente simples optamos por usar funções lambda como parâmetros para representar a ação de envio a ser executada em cada stub. Devido à natureza modular da solução que apresentámos é necessário apenas explicitar qual o comando e o conteúdo do request a ser enviado, consequentemente aumentando substancialmente a escalabilidade.
+
+No processo de análise e criação de melhorias à solução original, inicialmente decidimos elencar possíveis bottlenecks associados, rapidamente identificamos o write-back para todas réplicas mesmo aquelas atualizadas como uma possível ineficiência, assim como o pedido recorrente dos mesmos valores ao servidor quando estes podem estar armazenados numa cache local, por fim também observamos que o processo de identificar mudanças de ip (uma função responsável por isto estava a ser chamada para todos os comandos), era desnecessário quando consideramos a probabilidade do mesmo acontecer.
+
+Após longa consideração decidimos resolver os problemas mencionados das seguintes formas:
+
+- Implementar uma cache local, onde cada valor desejado só será exigido ao rec, caso não esteja na cache (garantimos que o valor não está alterado por se tratar de um só hub)
+- Utilizar Write-Back apenas quando a tag do request associado a um rec é inferior à tag máxima do read efetuado, desta forma garantimos que só enviamos Write-Back para recs desatualizados
+- Apenas verificar se existe mudança de ip de 10 em 10 chamadas, considerámos o número 10 como um número interessante para o tradeoff entre garantir que os ips se encontram certos e a superior velocidade do sistema.
+
+Como conjeturado teoricamente, verificamos que o tempo médio de cada leitura e escrita é entre 3 a 4 vezes inferior no estado final quando comparado com o estado inicial. 
+
+Outra observação interessante provém do também menor número de reads e writes devido à existência de uma cache associada.
 
 ## Notas finais
 
-_(Algo mais a dizer?)_
+Uma possível simplificação no que toca à interação entre a aplicação e o hub seria a implementação de uma cache, de forma a armazenar distâncias previamente conhecidas entre o utilizador e várias estações evitando uma remote procedure call adicional no comando Hub-Info.
+
+Outra das ponderações efetuadas no desenvolvimento do projeto foi a utilização de pesos diferenciados com alterações dinâmicas mediante a performance dos mesmos, devido a restrições inerentes ao desenvolvimento do projeto tal acabou por não ser feito, no entanto planificamos o seguinte roadmap:
+
+- Modelar a performance do sistema com uma função F(x1,x2, ... xn, p1, p2, ... pn), onde xi corresponde à latência média (para uma certa epoch) e pi corresponde ao peso (um exemplo que respeita a monotonia que desejariamos seria sum(-xi*pi))
+
+- Calcular as derivadas parciais em função dos pesos de forma a minimizar o custo da função acima definida
+
+- Somar a cada peso a derivada parcial a multiplicar pela learning rate (valor definido manualmente) 
+
+- Aplicar o protocolo normalmente, mas com os pesos atualizados
