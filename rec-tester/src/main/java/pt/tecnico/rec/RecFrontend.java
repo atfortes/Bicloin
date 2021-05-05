@@ -12,8 +12,6 @@ import pt.ulisboa.tecnico.sdis.zk.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class RecFrontend implements AutoCloseable {
 
@@ -80,13 +78,13 @@ public class RecFrontend implements AutoCloseable {
                 sender.run();
                 collector.wait(WAIT_TIME);
                 if (!collector.quorum())
-                    throw new StatusRuntimeException(Status.UNAVAILABLE);
+                    throw Status.UNAVAILABLE.withDescription("Ping was not answered").asRuntimeException();
                 List<Rec.CtrlPingResponse> responses = new ArrayList<>(collector.getResponses().values());
 
                 stats.merge(PING_TIMER_KEY, System.nanoTime()-start, Long::sum);
                 return responses.get(0);
             } catch (InterruptedException e){
-                throw new StatusRuntimeException(Status.INTERNAL);
+                throw Status.INTERNAL.withDescription("Quorum was not reached").asRuntimeException();
             }
         }
     }
@@ -111,9 +109,9 @@ public class RecFrontend implements AutoCloseable {
                 collector.wait(WAIT_TIME);
 
                 if (collector.exceptionConsensus()) {
-                    throw new StatusRuntimeException(Status.INVALID_ARGUMENT);
+                    throw Status.INVALID_ARGUMENT.withDescription("Register not found").asRuntimeException();
                 } else if (!collector.quorum()) {
-                    throw new StatusRuntimeException(Status.UNAVAILABLE);
+                    throw Status.UNAVAILABLE.withDescription("Quorum was not reached").asRuntimeException();
                 }
 
                 HashMap<String, Rec.ReadResponse> responses = collector.getResponses();
@@ -166,9 +164,9 @@ public class RecFrontend implements AutoCloseable {
                 collector.wait(WAIT_TIME);
 
                 if (collector.exceptionConsensus()) {
-                    throw new StatusRuntimeException(Status.INVALID_ARGUMENT);
+                    throw Status.INVALID_ARGUMENT.withDescription("Register not found").asRuntimeException();
                 } else if (!collector.quorum()) {
-                    throw new StatusRuntimeException(Status.UNAVAILABLE);
+                    throw Status.UNAVAILABLE.withDescription("Quorum was not reached").asRuntimeException();
                 }
 
                 List<Rec.WriteResponse> responses = new ArrayList<>(collector.getResponses().values());
