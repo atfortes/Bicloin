@@ -1,5 +1,6 @@
 package pt.tecnico.rec;
 
+import com.google.common.cache.CacheBuilder;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
@@ -8,31 +9,31 @@ import pt.tecnico.rec.grpc.Rec;
 import pt.tecnico.rec.grpc.RecordServiceGrpc;
 import pt.ulisboa.tecnico.sdis.zk.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class RecFrontend implements AutoCloseable {
 
     final String PING_COUNTER_KEY = "ping_counter";
     final String READ_COUNTER_KEY = "read_counter";
     final String WRITE_COUNTER_KEY = "write_counter";
+    final String TOTAL_COUNTER_KEY = "total_counter";
     final String PING_TIMER_KEY = "ping_timer";
     final String READ_TIMER_KEY = "read_timer";
     final String WRITE_TIMER_KEY = "write_timer";
 
-    List<ManagedChannel> channels = new ArrayList<>();
-    List<RecordServiceGrpc.RecordServiceStub> stubs = new ArrayList<>();
-    List<Double> weights = new ArrayList<>();
     ZKNaming zk;
     String path;
     int cid;
     double maxWeight;
     long WAIT_TIME = 3000;
+    final int STUB_UPDATE = 10;
     ConcurrentHashMap<String, Long> stats = new ConcurrentHashMap<>();
     ConcurrentHashMap<String, RecWrapper> records = new ConcurrentHashMap<>();
+    ConcurrentMap<String, Integer> seqCache = CacheBuilder.newBuilder().maximumSize(100L).<String, Integer>build().asMap();
 
     public RecFrontend(String zooHost, int zooPort, String path, int cid) throws ZKNamingException {
 
@@ -43,29 +44,31 @@ public class RecFrontend implements AutoCloseable {
         this.cid = cid;
     }
 
-    public void setStubs(String path) throws ZKNamingException {
-        ArrayList<ZKRecord> zkRecords = new ArrayList<>(zk.listRecords(path));
-        maxWeight = zkRecords.size();
-        for (ZKRecord zkRecord : zkRecords) {
-            if (!(records.containsKey(zkRecord.getPath()) && records.get(zkRecord.getPath()).getUri().equals(zkRecord.getURI()))) {
-                ManagedChannel channel = ManagedChannelBuilder.forTarget(zkRecord.getURI()).usePlaintext().build();
-                RecordServiceGrpc.RecordServiceStub stub = RecordServiceGrpc.newStub(channel);
-                records.put(zkRecord.getPath(), new RecWrapper(zkRecord.getURI(), channel, stub, 1.0));
+    public void setStubs(String path) {
+        try {
+            ArrayList<ZKRecord> zkRecords = new ArrayList<>(zk.listRecords(path));
+            maxWeight = zkRecords.size();
+            for (ZKRecord zkRecord : zkRecords) {
+                if (!(records.containsKey(zkRecord.getPath()) && records.get(zkRecord.getPath()).getUri().equals(zkRecord.getURI()))) {
+                    ManagedChannel channel = ManagedChannelBuilder.forTarget(zkRecord.getURI()).usePlaintext().build();
+                    RecordServiceGrpc.RecordServiceStub stub = RecordServiceGrpc.newStub(channel);
+                    records.put(zkRecord.getPath(), new RecWrapper(zkRecord.getURI(), channel, stub, 1.0));
+                }
             }
+        }
+        catch (ZKNamingException e) {
+            System.err.println("Caught exception during Zookeeper listing: " + e);
         }
     }
 
     public Rec.CtrlPingResponse ctrlPing(Rec.CtrlPingRequest request) {
 
-        try {
-            setStubs(path);
-        }
-        catch (ZKNamingException e) {
-            throw new StatusRuntimeException(Status.INTERNAL);
-        }
-
         stats.merge(PING_COUNTER_KEY, 1L, Long::sum);
+        stats.merge(TOTAL_COUNTER_KEY, 1L, Long::sum);
         long start = System.nanoTime();
+
+        // update stub information from zookeeper
+        if (stats.get(TOTAL_COUNTER_KEY) % STUB_UPDATE == 0) { setStubs(path); }
 
         ResponseCollector<Rec.CtrlPingResponse> collector = new ResponseCollector<>(1);
 
@@ -78,7 +81,7 @@ public class RecFrontend implements AutoCloseable {
                 collector.wait(WAIT_TIME);
                 if (!collector.quorum())
                     throw new StatusRuntimeException(Status.UNAVAILABLE);
-                var responses = collector.getResponses();
+                List<Rec.CtrlPingResponse> responses = new ArrayList<>(collector.getResponses().values());
 
                 stats.merge(PING_TIMER_KEY, System.nanoTime()-start, Long::sum);
                 return responses.get(0);
@@ -90,15 +93,12 @@ public class RecFrontend implements AutoCloseable {
 
     public Rec.ReadResponse read(Rec.ReadRequest request) {
 
-        try {
-            setStubs(path);
-        }
-        catch (ZKNamingException e) {
-            throw new StatusRuntimeException(Status.INTERNAL);
-        }
-
         stats.merge(READ_COUNTER_KEY, 1L, Long::sum);
+        stats.merge(TOTAL_COUNTER_KEY, 1L, Long::sum);
         long start = System.nanoTime();
+
+        // update stub information from zookeeper
+        if (stats.get(TOTAL_COUNTER_KEY) % STUB_UPDATE == 0) { setStubs(path); }
 
         ResponseCollector<Rec.ReadResponse> collector = new ResponseCollector<>(maxWeight);
 
@@ -116,16 +116,20 @@ public class RecFrontend implements AutoCloseable {
                     throw new StatusRuntimeException(Status.UNAVAILABLE);
                 }
 
-                Rec.ReadResponse response = Collections.max(collector.getResponses(), (first, second) -> {
+                HashMap<String, Rec.ReadResponse> responses = collector.getResponses();
+                Rec.ReadResponse response = Collections.max(responses.values(), (first, second) -> {
                     int seqComparison = Integer.compare(first.getSeq(), second.getSeq());
                     if (seqComparison == 0) return Integer.compare(first.getCid(), second.getCid());
                     else return seqComparison;
                 });
+                seqCache.put(request.getName(), response.getSeq());
 
                 // write back
                 Rec.WriteRequest writeBackRequest = Rec.WriteRequest.newBuilder().setName(request.getName())
                         .setSeq(response.getSeq()).setCid(response.getCid()).setValue(response.getValue()).build();
-                this.write(writeBackRequest);
+                List<String> paths = new ArrayList<>();
+                responses.forEach((k, v) -> { if (v.getSeq() != response.getSeq() || v.getCid() != response.getCid()) paths.add(k); });
+                if (!path.isEmpty()) this.writeBack(writeBackRequest, paths);
 
                 stats.merge(READ_TIMER_KEY, System.nanoTime()-start, Long::sum);
                 return response;
@@ -138,18 +142,17 @@ public class RecFrontend implements AutoCloseable {
 
     public Rec.WriteResponse write(Rec.WriteRequest request) {
 
-        try {
-            setStubs(path);
-        }
-        catch (ZKNamingException e) {
-            throw new StatusRuntimeException(Status.INTERNAL);
-        }
-
         stats.merge(WRITE_COUNTER_KEY, 1L, Long::sum);
+        stats.merge(TOTAL_COUNTER_KEY, 1L, Long::sum);
         long start = System.nanoTime();
 
-        int seq = request.getSeq();
-        if (seq == 0) seq = this.read(Rec.ReadRequest.newBuilder().setName(request.getName()).build()).getSeq() + 1;
+        // update stub information from zookeeper
+        if (stats.get(TOTAL_COUNTER_KEY) % STUB_UPDATE == 0) { setStubs(path); }
+
+        int seq;
+        // check if most recent is in cache or if a read is needed
+        if (seqCache.containsKey(request.getName())) { seq = seqCache.get(request.getName()) + 1; }
+        else { seq = this.read(Rec.ReadRequest.newBuilder().setName(request.getName()).build()).getSeq() + 1; }
 
         Rec.WriteRequest newRequest = Rec.WriteRequest.newBuilder().setName(request.getName()).setSeq(seq).setCid(cid).setValue(request.getValue()).build();
         ResponseCollector<Rec.WriteResponse> collector = new ResponseCollector<>(maxWeight);
@@ -168,7 +171,9 @@ public class RecFrontend implements AutoCloseable {
                     throw new StatusRuntimeException(Status.UNAVAILABLE);
                 }
 
-                var responses = collector.getResponses();
+                List<Rec.WriteResponse> responses = new ArrayList<>(collector.getResponses().values());
+                seqCache.put(request.getName(), seq);
+
                 stats.merge(WRITE_TIMER_KEY, System.nanoTime()-start, Long::sum);
                 return responses.get(0);
             }
@@ -176,6 +181,23 @@ public class RecFrontend implements AutoCloseable {
                 throw new StatusRuntimeException(Status.INTERNAL);
             }
         }
+    }
+
+    // FIXME how do we want to count and time these writes?
+    public void writeBack(Rec.WriteRequest request, List<String> paths) {
+
+        stats.merge(WRITE_COUNTER_KEY, (long) paths.size(), Long::sum);
+        stats.merge(TOTAL_COUNTER_KEY, 1L, Long::sum);
+        long start = System.nanoTime();
+
+        // update stub information from zookeeper
+        if (stats.get(TOTAL_COUNTER_KEY) % STUB_UPDATE == 0) { setStubs(path); }
+
+        // observer is null because with do not need to receive an answer
+        for (String path : paths)
+            records.get(path).getStub().write(request, null);
+
+        stats.merge(WRITE_TIMER_KEY, System.nanoTime()-start, Long::sum);
     }
 
     public ZKNaming getZkNaming() {
@@ -189,16 +211,14 @@ public class RecFrontend implements AutoCloseable {
 
         ResponseCollector<Resp> collector;
 
-        SendRequestToAll(Req req, ResponseCollector<Resp> collector, RequestCall<Req,Resp> fn){
+        SendRequestToAll(Req req, ResponseCollector<Resp> collector, RequestCall<Req,Resp> fn) {
             this.req = req;
             this.fn = fn;
             this.collector = collector;
         }
 
-        public void run(){
-            for (RecWrapper record : records.values()) {
-                fn.sendRequestToStub(record.getStub(), req, new RecObserver<>(collector, record.getWeight()));
-            }
+        public void run() {
+            records.forEach((k, v) -> fn.sendRequestToStub(v.getStub(), req, new RecObserver<>(collector, v.getWeight(), k)));
         }
     }
 
@@ -236,7 +256,6 @@ public class RecFrontend implements AutoCloseable {
     public interface RequestCall<Req,Ret>{
         void sendRequestToStub(RecordServiceGrpc.RecordServiceStub stub, Req request, RecObserver<Ret> observer);
     }
-
 
     @Override
     public final void close() {

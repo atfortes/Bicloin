@@ -1,21 +1,24 @@
 package pt.tecnico.rec;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ResponseCollector<Resp>{
 
     private double maxWeight;
     private volatile double success = 0;
     private volatile double fail = 0;
-    private List<Resp> responses= new ArrayList<>();
+    private HashMap<String, Resp> responses = new HashMap<>();
 
     public ResponseCollector(double maxWeight){
         this.maxWeight = maxWeight;
     }
 
-    synchronized void registerResponse(double weight, Resp response){
-        responses.add(response);
+    synchronized void registerResponse(double weight, Resp response, String path){
+        responses.put(path, response);
         success += weight;
         if (quorum())
             this.notifyAll();
@@ -35,7 +38,7 @@ public class ResponseCollector<Resp>{
         return fail > maxWeight/2;
     }
 
-    public List<Resp> getResponses(){
+    public HashMap<String, Resp> getResponses(){
         return responses;
     }
 }
