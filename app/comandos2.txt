@@ -1,0 +1,18 @@
+# viagem da gulbenkian para o oceanario, de bicicleta e metro
+top-up 10
+tag 38.7376 -9.1545 start
+move start
+bike-up gulb
+balance
+
+# pedalar até à estação
+move 38.7633 -9.095
+bike-down ocea
+balance
+move 38.6867 -9.3124
+# viajar de comboio
+bike-up stao
+# pedalar novamente a gulbenkian
+move 38.7376 -9.1545
+bike-down gulb
+balance

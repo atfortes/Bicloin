@@ -1,0 +1,96 @@
+# viagem dos jeronimos ate praca do comercio x10
+top-up 20
+tag 38.6972 -9.2064 start
+tag 38.7075 -9.1365 end
+
+move start
+bike-up jero
+move end
+bike-down prcm
+
+bike-up prcm
+move start
+bike-down jero
+
+move start
+bike-up jero
+move end
+bike-down prcm
+
+bike-up prcm
+move start
+bike-down jero
+
+move start
+bike-up jero
+move end
+bike-down prcm
+
+bike-up prcm
+move start
+bike-down jero
+
+move start
+bike-up jero
+move end
+bike-down prcm
+
+bike-up prcm
+move start
+bike-down jero
+
+move start
+bike-up jero
+move end
+bike-down prcm
+
+bike-up prcm
+move start
+bike-down jero
+
+move start
+bike-up jero
+move end
+bike-down prcm
+
+bike-up prcm
+move start
+bike-down jero
+
+move start
+bike-up jero
+move end
+bike-down prcm
+
+bike-up prcm
+move start
+bike-down jero
+
+move start
+bike-up jero
+move end
+bike-down prcm
+
+bike-up prcm
+move start
+bike-down jero
+
+move start
+bike-up jero
+move end
+bike-down prcm
+
+bike-up prcm
+move start
+bike-down jero
+
+move start
+bike-up jero
+move end
+bike-down prcm
+
+bike-up prcm
+move start
+bike-down jero
+
+balance
