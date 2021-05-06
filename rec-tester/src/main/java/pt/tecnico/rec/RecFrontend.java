@@ -126,8 +126,8 @@ public class RecFrontend implements AutoCloseable {
                 Rec.WriteRequest writeBackRequest = Rec.WriteRequest.newBuilder().setName(request.getName())
                         .setSeq(response.getSeq()).setCid(response.getCid()).setValue(response.getValue()).build();
                 List<String> paths = new ArrayList<>();
-                responses.forEach((k, v) -> { if (v.getSeq() != response.getSeq() || v.getCid() != response.getCid()) paths.add(k); });
-                if (!path.isEmpty()) this.writeBack(writeBackRequest, paths);
+                responses.forEach((k, v) -> { if (v.getSeq() < response.getSeq() || (v.getSeq() == response.getSeq() && v.getCid() < response.getCid())) paths.add(k); });
+                if (!paths.isEmpty()) this.writeBack(writeBackRequest, paths);
 
                 stats.merge(READ_TIMER_KEY, System.nanoTime()-start, Long::sum);
                 return response;
@@ -151,6 +151,7 @@ public class RecFrontend implements AutoCloseable {
         // check if most recent is in cache or if a read is needed
         if (seqCache.containsKey(request.getName())) { seq = seqCache.get(request.getName()) + 1; }
         else { seq = this.read(Rec.ReadRequest.newBuilder().setName(request.getName()).build()).getSeq() + 1; }
+        //seq = this.read(Rec.ReadRequest.newBuilder().setName(request.getName()).build()).getSeq() + 1;
 
         Rec.WriteRequest newRequest = Rec.WriteRequest.newBuilder().setName(request.getName()).setSeq(seq).setCid(cid).setValue(request.getValue()).build();
         ResponseCollector<Rec.WriteResponse> collector = new ResponseCollector<>(maxWeight);
@@ -181,19 +182,17 @@ public class RecFrontend implements AutoCloseable {
         }
     }
 
-    // FIXME how do we want to count and time these writes?
     public void writeBack(Rec.WriteRequest request, List<String> paths) {
 
-        stats.merge(WRITE_COUNTER_KEY, (long) paths.size(), Long::sum);
+        stats.merge(WRITE_COUNTER_KEY, 1L, Long::sum);
         stats.merge(TOTAL_COUNTER_KEY, 1L, Long::sum);
         long start = System.nanoTime();
 
         // update stub information from zookeeper
         if (stats.get(TOTAL_COUNTER_KEY) % STUB_UPDATE == 0) { setStubs(path); }
 
-        // observer is null because with do not need to receive an answer
         for (String path : paths)
-            records.get(path).getStub().write(request, null);
+            records.get(path).getStub().write(request, new RecObserver<>(null, 0.0, "") );
 
         stats.merge(WRITE_TIMER_KEY, System.nanoTime()-start, Long::sum);
     }
@@ -220,7 +219,7 @@ public class RecFrontend implements AutoCloseable {
         }
     }
 
-    private class RecWrapper {
+    private static class RecWrapper {
         String uri;
         ManagedChannel channel;
         RecordServiceGrpc.RecordServiceStub stub;

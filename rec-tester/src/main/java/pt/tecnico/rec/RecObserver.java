@@ -16,12 +16,16 @@ public class RecObserver<R> implements StreamObserver<R> {
 
     @Override
     public void onNext(R r) {
-        collector.registerResponse(weight, r, path);
+        if (collector != null) {
+            collector.registerResponse(weight, r, path);
+        }
     }
 
     @Override
     public void onError(Throwable throwable) {
-        collector.registerException(weight);
+        if (collector != null) {
+            collector.registerException(weight);
+        }
     }
 
     @Override

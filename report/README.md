@@ -115,8 +115,8 @@ ReadWriteRatio | 0.6549
 ### Estado Final (após otimizações):
 Medição | Cliente (Hub)
 --- | --- 
-ReadTime | 26 ms
-WriteTime | 39 ms
+ReadTime | 19 ms
+WriteTime | 19 ms
 Reads | 239
 Writes | 233
 ReadWriteRatio | ~1
