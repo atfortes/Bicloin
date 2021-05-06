@@ -77,6 +77,7 @@ Nota: O `read` e o `ctrl_ping` podem ser comandos executados normalmente, no ent
 
 
 Procedimentos no Cliente:
+
 Comando | Cliente  
 --- | --- 
 `Ctrl_Ping` | Define Mensagem; Envia Pedido para todos os Servidores; Recebe Respostas Corretas; Escolhe a primeira 
@@ -104,11 +105,11 @@ Comando | Servidor
 
 Medição | Cliente (Hub)
 --- | --- 
-ReadTime | 134 ms
+ReadTime | 135 ms
 WriteTime | 91 ms
-Reads | 427
-Writes | 652
-ReadWriteRatio | 0.6549
+Reads | 388
+Writes | 592
+ReadWriteRatio | 0.6554
 
 <br />
 

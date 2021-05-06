@@ -4,7 +4,6 @@ import com.google.common.cache.CacheBuilder;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
 import pt.tecnico.rec.grpc.Rec;
 import pt.tecnico.rec.grpc.RecordServiceGrpc;
 import pt.ulisboa.tecnico.sdis.zk.*;
@@ -83,8 +82,8 @@ public class RecFrontend implements AutoCloseable {
 
                 stats.merge(PING_TIMER_KEY, System.nanoTime()-start, Long::sum);
                 return responses.get(0);
-            } catch (InterruptedException e){
-                throw Status.INTERNAL.withDescription("Quorum was not reached").asRuntimeException();
+            } catch (InterruptedException e) {
+                throw Status.INTERNAL.withDescription("Thread interrupted").asRuntimeException();
             }
         }
     }
@@ -133,7 +132,7 @@ public class RecFrontend implements AutoCloseable {
                 return response;
             }
             catch (InterruptedException e) {
-                throw new StatusRuntimeException(Status.INTERNAL);
+                throw Status.INTERNAL.withDescription("Thread interrupted").asRuntimeException();
             }
         }
     }
@@ -177,7 +176,7 @@ public class RecFrontend implements AutoCloseable {
                 return responses.get(0);
             }
             catch (InterruptedException e) {
-                throw new StatusRuntimeException(Status.INTERNAL);
+                throw Status.INTERNAL.withDescription("Thread interrupted").asRuntimeException();
             }
         }
     }
