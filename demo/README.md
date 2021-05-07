@@ -23,14 +23,14 @@ $ mvn clean install -DskipTests
 
 ### 1.3. Lançar e testar o *rec*
 
-Para proceder aos testes, é preciso em primeiro lugar lançar o servidor *rec* .
+Para proceder aos testes, é preciso em primeiro lugar lançar os vários servidores *rec* .
 Para isso basta ir à pasta *rec* e executar:
 
 ```sh
-$ mvn compile exec:java
+$ mvn compile exec:java -Drec.i="n"
 ```
 
-Este comando vai colocar o *rec* no endereço *localhost* e na porta *8091*.
+Este comando vai colocar o *rec* no endereço *localhost* e no porto *809n* onde o argumento n é o número da instância.
 
 Para confirmar o funcionamento do servidor com um *ping*, fazer:
 
@@ -59,7 +59,7 @@ Para isso basta ir à pasta *hub* e executar:
 $ mvn compile exec:java
 ```
 
-Este comando vai colocar o *hub* no endereço *localhost* e na porta *8081*.
+Este comando vai colocar o *hub* no endereço *localhost* e na porto *8081*.
 
 **Nota:** ficheiros stations.csv e users.csv têm de estar na diretoria *hub*.
 
