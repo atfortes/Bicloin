@@ -80,15 +80,15 @@ Todos os testes devem ser executados sem erros.
 
 ### 1.5. *App*
 
-Iniciar a aplicação com a utilizadora alice:
+Iniciar a aplicação com o utilizador de nome *x* e telemóvel *y* nas coordenadas *lat* e *long*:
 
 ```sh
-$ app localhost 2181 alice +35191102030 38.7380 -9.3000
+$ mvn compile exec:java -Duser.id="x" -Duser.phone="+y" -Duser.lat="lat" -Duser.lon="long"
 ```
 
 **Nota:** Para poder correr o script *app* diretamente é necessário fazer `mvn install` e adicionar ao *PATH* ou utilizar diretamente os executáveis gerados na pasta `target/appassembler/bin/`.
 
-Abrir outra consola, e iniciar a aplicação com o utilizador bruno.
+Abrir outras consolas, com quantos utilizadores for necessário para testar o sistema integralmente.
 
 Depois de lançar todos os componentes, tal como descrito acima, já temos o que é necessário para usar o sistema através dos comandos.
 
