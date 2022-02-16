@@ -1,36 +1,19 @@
-# A43-Bicloin
+# Bicloin - Group A43
 
 Distributed Systems 2020-2021, 2nd semester project
 
 
 ## Authors
 
-**Group A43**
+[Armando Fortes](https://github.com/atfortes) & [Diogo Soares](https://github.com/diogosoares22) & [Hugo Pitorro](https://github.com/xtwigs)
 
-Hugo Pitorro [92478](mailto:hugo.pitorro@tecnico.ulisboa.pt)
-
-Diogo Soares [92455](mailto:diogo.sousa.soares@tecnico.ulisboa.pt)
-
-Armando Fortes [92428](mailto:armando.teles.fortes@tecnico.ulisboa.pt)
-
-### Module leaders
-
-For each module, the README file must identify the lead developer and the contributors.
-The leads should be evenly divided among the group members.
-
-### Code identification
-
-In all the source files (including POMs), please replace __CXX__ with your group identifier.  
-The group identifier is composed by Campus - A (Alameda) or T (Tagus) - and number - always with two digits.
-
-This change is important for code dependency management, to make sure that your code runs using the correct components and not someone else's.
-
+For each module, the README file identifies the lead developer and the contributors.
 
 ## Getting Started
 
 The overall system is composed of multiple modules.
 
-See the project statement for a full description of the domain and the system.
+See the [project statement](https://github.com/tecnico-distsys/Bicloin/blob/main/README.md) for a full description of the domain and the system.
 
 ### Prerequisites
 
